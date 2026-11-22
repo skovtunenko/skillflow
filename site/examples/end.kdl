@@ -1,0 +1,7 @@
+skillflow 1.0
+
+gate approved "Did the user approve the draft?" {
+	when rejected {
+		end "the user stopped without approval"
+	}
+}

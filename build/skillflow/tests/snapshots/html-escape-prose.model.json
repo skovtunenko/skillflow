@@ -1,0 +1,47 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": null,
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 0,
+  "step": 1,
+  "decide": 0,
+  "end": 0,
+  "by": {
+   "llm": 1
+  },
+  "unclear": 0
+ },
+ "context": {
+  "purpose": "",
+  "inputs": [],
+  "outputs": [],
+  "invariants": [],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "step",
+   "line": 2,
+   "name": "a",
+   "by": "llm",
+   "question": "",
+   "prose": "Use <b> & \"q\" and 'x' </script>",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [],
+   "outputs": [],
+   "onfail": null
+  }
+ ],
+ "data": {},
+ "tools": {},
+ "unclear": [],
+ "sourceText": "skillflow 1.0\nstep a by=llm \"Use <b> & \\\"q\\\" and 'x' </script>\"\n",
+ "example": null
+}

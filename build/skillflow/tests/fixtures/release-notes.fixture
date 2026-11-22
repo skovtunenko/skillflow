@@ -1,0 +1,40 @@
+skillflow 1.0
+
+context {
+	input tag "the git tag to describe"
+	input changelog "the project's existing CHANGELOG.md"
+	output changelog "a new section in CHANGELOG.md"
+	invariant by=human "nothing is published without the user's approval"
+}
+
+phase gather {
+	step collect-changes by=code file="scripts/collect.sh" {
+		tools gh
+		output changes "the commits and pull requests since the last tag"
+		on-fail {
+			end "report that the tag does not exist"
+		}
+	}
+}
+
+phase write {
+	step draft by=llm """
+		Group the changes by type. Leave out internal refactors.
+		Show the draft and revise it until the user approves it or stops.
+		""" {
+		output draft "the release notes before approval"
+	}
+	// ? The skill does not say how many revision rounds are allowed (SKILL.md:24).
+	gate approved "Did the user approve the draft?" {
+		when rejected {
+			end "the user stopped without approval"
+		}
+	}
+	step publish by=code {
+		output changelog
+		on-fail {
+			step report-error by=llm "Show the error and leave CHANGELOG.md unchanged."
+			end "CHANGELOG.md stays unchanged"
+		}
+	}
+}

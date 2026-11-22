@@ -1,0 +1,6 @@
+FAIL <TMP>/flow.kdl · 1 error
+  phases 1 · steps 0 · decisions 0 · ends 0 · executors: - · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:1: error: the file must start with `skillflow 1.0` (hint: first line: skillflow 1.0)

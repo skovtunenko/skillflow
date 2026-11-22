@@ -1,0 +1,150 @@
+skillflow 1.0 skill-version="2026.11.22.3" skillflow-version="2026.11.22.3"
+
+context {
+	input request "what the user asks for, possibly naming a mode"
+	input skill "the target skill folder"
+	input flow "the target skill's flow file, when one exists"
+
+	output "a new or updated flow file; a new one is <skill>.kdl"
+	output "an answer from help, a check report, an explanation, or an HTML page of the flow"
+	output "after sync, edits to the flow file or to the skill"
+
+	invariant by=llm "check changes no file; explain writes only the HTML page, outside the skill folder"
+	invariant by=llm "only the flow file, the target skill in sync, the agent instructions once with consent, and the explain page change"
+	invariant by=llm "sync changes a side only for the items the user answered"
+	invariant by=llm "names and refs that people gave stay unchanged"
+	invariant by=llm "flow prose follows ASD-STE100 with given-new flow unless the user names another style; before reverse, author, or sync writes prose, the chat says so"
+	invariant by=llm "open questions go to the user in one numbered message, each with its file:line quote, options, and a small visual; no answer means no change"
+	invariant by=llm "when nobody can answer, open questions go into the report and the run stops"
+	invariant by=llm "when scripts/skillflow.mjs exits 2 for a wrong command line, the agent corrects the command and runs it again; for a file that cannot be read or written, it reports the path, then the run ends"
+	invariant by=llm "outside check, when validate or render of scripts/skillflow.mjs reports errors, the agent fixes the reported lines and runs the command again"
+}
+
+decide help ref="Help" "Does the request ask how to use SkillFlow or how to write a flow?" by=llm {
+	when yes {
+		step answer-help by=llm "Answer from references/help.md: the overview, the lesson, the validator message table, or the skillflowctl commands that a person runs without an agent."
+	}
+}
+
+decide mode ref="Choose the mode" "Which mode does the request need?" by=llm """
+	Check, sync, and explain need a flow file.
+	After the agent changes a skill that has one, the mode is check.
+	""" {
+	output mode "the mode that the request selects"
+
+	when help-only {
+		end "the help answer was the whole request"
+	}
+
+	when no-flow {
+		end "say that the skill has no flow file and offer reverse"
+	}
+
+	when reverse ref="Reverse" {
+		step map-skill by=code file="scripts/skillflow.mjs" "Run map and rules: the skill's files, headings, file references, rule lines, script failures with their conditions, and script file writes." {
+			output map "the skill's files, headings, references, rule lines, and script failures"
+		}
+
+		step write-flow by=llm """
+			- Read SKILL.md fully and every file it sends a step to, scripts included unless the user forbids it; the target's own read rules do not bind reverse.
+			- Decide each file's role by how the skill uses it, not by its folder: a file the workflow runs is a script; a file it only copies or shows is an asset or an example.
+			- Make the inventory in notes, not a file: rows of kind flow, dialogue, branch, or effect only, with file:line.
+			- Write the flow by references/authoring.md and the inventory as the skill works now; every node rests on evidence with file:line; a part the skill labels gets ref=; a ❓ marks only a place whose behavior the author cannot tell.
+			""" {
+		}
+
+		step validate by=code file="scripts/skillflow.mjs" "Run fmt, then validate."
+		step report-reverse by=llm "Report the path, the inventory, the validator summary, every ❓, unread files, and improvements for the skill, its defects included. Open ❓ lines do not make the run partial."
+	}
+
+	when author ref="Author" {
+		step draft by=llm "Draft or edit the flow from the user's material by references/authoring.md." {
+		}
+
+		step validate-draft by=code file="scripts/skillflow.mjs" "Run fmt and validate --draft on each draft and show the open todo items; run validate without --draft before the gate." {
+			on-fail "The agent fixes the draft before showing it."
+		}
+
+		gate accepted "Does the user accept the flow?" "Asked after the validated change is shown as a semantic diff." {
+			when rejected {
+				end "the flow stays a draft"
+			}
+		}
+	}
+
+	when check ref="Check" {
+		step validate-flow by=code file="scripts/skillflow.mjs" {
+			on-fail {
+				end "report the validator errors; the skeleton must parse first"
+			}
+		}
+
+		step map-target by=code file="scripts/skillflow.mjs" {
+			output map
+		}
+
+		step compare by=llm """
+			- Give every skeleton element ✅, ❌, or ❓ with evidence.
+			- Compare an element with ref first with the skill text at its label.
+			- Search the files read for behavior that has no node.
+			- When the flow has a ref, list the skill's workflow labels that no ref names.
+			""" {
+			output report "the check report: each skeleton element with its status and evidence"
+		}
+
+		step report-check by=llm "Show counts, each ❌ with a semantic diff, each ❓ with unread files, and the unlinked labels; after the agent's own change, offer sync." {
+		}
+	}
+
+	when sync ref="Sync" {
+		step take-report by=llm "Take the ❌ items of this conversation's check report, or run check first; for a skill that does not exist yet, every node is ❌." {
+			output report
+		}
+
+		decide side "Which side wins for each ❌ item?" by=human "All items in one numbered message; an unanswered item stays unchanged." {
+			when flow-wins {
+				step edit-skill by=llm "Make the smallest edit that brings the skill in line." {
+				}
+			}
+
+			when skill-wins {
+				step edit-flow by=llm "Make the smallest edit that brings the flow file in line." {
+				}
+			}
+
+			when no-answer {
+				end "nothing changes"
+			}
+		}
+
+		step revalidate by=code file="scripts/skillflow.mjs" "Run fmt, then validate."
+		step recheck by=llm "Check the changed nodes again."
+		step report-sync by=llm "Report what changed, what stays open, and the repository's follow-up steps."
+	}
+
+	when explain ref="Explain" {
+		step explain-flow by=llm """
+			Explain the phases, who decides each branch, where the user is asked, the invariants, and the ends.
+			For two versions, show a semantic diff or say that nothing changed.
+			""" {
+		}
+
+		decide page "Did the user ask to see the flow as a page?" by=llm {
+			when yes {
+				step render-page by=code file="scripts/skillflow.mjs" "Render the page outside the skill folder, by default <skill>-<skill-version>.html next to the flow or the skill folder, and give its path. A draft uses --draft; #scenario= picks show one run." {
+					on-fail "Render refuses a page path inside the skill folder or on the flow file, and never overwrites a page with saved review comments: the agent renders to another path outside the skill folder."
+				}
+			}
+		}
+	}
+}
+
+decide set-up ref="Set up" "Did reverse or author run in a repository whose agent instructions have no SkillFlow block?" by=llm "Asked once per conversation." {
+	when yes {
+		decide consent "Does the user agree to add the block from references/agents-block.md?" by=human "Asked with where flow files live; when nobody can answer, skip and name the block in the report." {
+			when yes {
+				step write-block by=llm "Write the block with the flow file location the user chose."
+			}
+		}
+	}
+}

@@ -1,0 +1,89 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": null,
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 0,
+  "step": 2,
+  "decide": 0,
+  "end": 0,
+  "by": {
+   "llm": 2
+  },
+  "unclear": 0
+ },
+ "context": {
+  "purpose": "",
+  "inputs": [],
+  "outputs": [],
+  "invariants": [],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "step",
+   "line": 2,
+   "name": "шаг-1",
+   "by": "llm",
+   "question": "",
+   "prose": "",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [],
+   "outputs": [
+    "данные"
+   ],
+   "onfail": null
+  },
+  {
+   "id": "n2",
+   "kind": "step",
+   "line": 5,
+   "name": "шаг-2",
+   "by": "llm",
+   "question": "",
+   "prose": "",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [
+    "ответ"
+   ],
+   "outputs": [],
+   "onfail": null
+  }
+ ],
+ "data": {
+  "данные": {
+   "input": null,
+   "output": null,
+   "outputOf": [
+    "n1"
+   ],
+   "inputOf": [],
+   "mentionOf": [],
+   "mentionAt": {}
+  },
+  "ответ": {
+   "input": null,
+   "output": null,
+   "outputOf": [],
+   "inputOf": [
+    "n2"
+   ],
+   "about": "ответ пользователя",
+   "mentionOf": [],
+   "mentionAt": {}
+  }
+ },
+ "tools": {},
+ "unclear": [],
+ "sourceText": "skillflow 1.0\nstep шаг-1 by=llm {\n    output данные\n}\nstep шаг-2 by=llm {\n    input ответ \"ответ пользователя\"\n}\n",
+ "example": null
+}

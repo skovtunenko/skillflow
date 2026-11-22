@@ -1,0 +1,6 @@
+FAIL <TMP>/flow.kdl · 1 error
+  phases 0 · steps 2 · decisions 0 · ends 1 · executors: llm 2 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:3: error: name `a` is already used on line 2 (hint: phase, step, decide, and gate names are unique in the file)

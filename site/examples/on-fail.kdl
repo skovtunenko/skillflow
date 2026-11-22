@@ -1,0 +1,7 @@
+skillflow 1.0
+
+step collect-changes by=code {
+	on-fail {
+		end "the tag does not exist"
+	}
+}

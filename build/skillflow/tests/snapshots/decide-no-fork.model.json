@@ -1,0 +1,68 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": null,
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 0,
+  "step": 0,
+  "decide": 1,
+  "end": 0,
+  "by": {
+   "human": 1
+  },
+  "unclear": 0
+ },
+ "context": {
+  "purpose": "",
+  "inputs": [],
+  "outputs": [],
+  "invariants": [],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "decide",
+   "line": 2,
+   "name": "scope",
+   "by": "human",
+   "question": "Project or user?",
+   "prose": "",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [],
+   "outputs": [],
+   "whens": [
+    {
+     "id": "n2",
+     "line": 3,
+     "outcome": "project",
+     "prose": "the workspace folder",
+     "unclear": [],
+     "outputs": [],
+     "children": [],
+     "ends": false
+    },
+    {
+     "id": "n3",
+     "line": 4,
+     "outcome": "user",
+     "prose": "the home folder",
+     "unclear": [],
+     "outputs": [],
+     "children": [],
+     "ends": false
+    }
+   ]
+  }
+ ],
+ "data": {},
+ "tools": {},
+ "unclear": [],
+ "sourceText": "skillflow 1.0\ndecide scope \"Project or user?\" by=human {\n    when project \"the workspace folder\"\n    when user \"the home folder\"\n}\n",
+ "example": null
+}

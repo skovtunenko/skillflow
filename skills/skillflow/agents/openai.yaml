@@ -1,0 +1,6 @@
+interface:
+  display_name: "SkillFlow"
+  short_description: "Describe a skill's workflow as a KDL flow file, check it against the skill, and render it as a page"
+  default_prompt: "skillflow reverse: create a flow.kdl for the skill in this folder and report every unclear place."
+policy:
+  allow_implicit_invocation: true

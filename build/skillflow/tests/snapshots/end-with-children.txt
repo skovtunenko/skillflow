@@ -1,0 +1,7 @@
+FAIL <TMP>/flow.kdl · 1 error, 1 warning
+  phases 0 · steps 0 · decisions 0 · ends 0 · executors: - · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:2: error: `end` takes no children (hint: remove its { … } block)
+  <TMP>/flow.kdl:2: warning: closing top-level `end` is unnecessary (hint: drop it: the flow ends after its last node anyway; keep `end` for early exits)
