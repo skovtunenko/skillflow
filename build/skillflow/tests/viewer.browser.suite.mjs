@@ -102,6 +102,9 @@ async function launchOnce() {
     const {targetId} = await send("Target.createTarget", {url: "about:blank"});
     const {sessionId} = await send("Target.attachToTarget", {targetId, flatten: true});
     await send("Page.enable", {}, sessionId);
+    // every page starts in one window size. Without this it is the default of headless Chrome, which differs between macOS and Linux,
+    // and the editor's start layout turns at 760px. 756x469 is the macOS default, which the tests were written against.
+    await send("Emulation.setDeviceMetricsOverride", {width: 756, height: 469, deviceScaleFactor: 1, mobile: false}, sessionId);
     const page = {
       dialogs,
       close: () => send("Target.closeTarget", {targetId}),
