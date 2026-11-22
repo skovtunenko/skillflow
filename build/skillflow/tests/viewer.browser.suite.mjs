@@ -55,6 +55,8 @@ const killAll = () => { for (const child of started) child.kill("SIGKILL"); star
 async function launchOnce() {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "skillflow-chrome-"));
   const child = spawn(CHROME, ["--headless=new", "--disable-gpu", "--disable-extensions", "--no-first-run", "--no-default-browser-check",
+    // a desktop with a mouse: a Linux CI runner has no pointer, so `(hover: hover)` is false there and the viewer installs no hover preview
+    "--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
     "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], {stdio: "ignore"});
   started.add(child);
   const exited = new Promise((done) => child.once("exit", () => { started.delete(child); done(); }));
