@@ -1,0 +1,6 @@
+FAIL <TMP>/flow.kdl · 1 error
+  phases 1 · steps 1 · decisions 0 · ends 0 · executors: llm 1 · ❓ 0
+  tools: -
+  invariants: code 0 · human 0 · llm 0 · unstated 1
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:5: error: `context` must come once, right after `skillflow 1.0` (hint: move it to the top)

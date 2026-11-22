@@ -1,0 +1,6 @@
+OK <TMP>/flow.kdl · 1 warning
+  phases 0 · steps 1 · decisions 0 · ends 0 · executors: llm 1 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:6: warning: input `ghost` exists already: reading is prose (hint: line 3 names it first, and it may be the mistake: fix that line, or drop this line and say in the node's prose what it reads; a node `input` names what the skill asks the user for here)

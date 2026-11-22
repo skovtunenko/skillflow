@@ -1,0 +1,6 @@
+OK <TMP>/flow.kdl · 1 warning
+  phases 0 · steps 0 · decisions 1 · ends 0 · executors: human 1 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:2: warning: `decide` forks no path: no `when` holds a node or an `end` (hint: the answer is a value: write `input <name> "…"` on the node that asks, with the values in its description)

@@ -1,0 +1,163 @@
+<div class="help-in">
+<nav class="help-toc" aria-label="Help sections"><div class="toc-in"><a href="#h-lang">1 · Syntax</a><a href="#h-nodes">2 · Nodes</a><a href="#h-example">3 · Example</a><a href="#h-best">4 · Best practices</a><a href="#h-editor">5 · Editor</a></div></nav>
+
+<p class="lead">A <b>flow file</b> (<code>flow.kdl</code>) describes one skill's workflow so that a person can review it in minutes. Its nodes are the <b>skeleton</b>: phases, steps, decisions, who acts, data, invariants and exits. Its quoted strings are <b>prose</b>: the intent of each node.</p>
+
+<h2 id="h-lang">1 · Syntax: KDL 2.0.0</h2>
+<p>A flow file is a <a href="https://kdl.dev/spec/" rel="noreferrer">KDL 2.0.0</a> document, not KDL v1, YAML or JSON.</p>
+<div class="primer">
+<div><h3>Node</h3><p>A name, arguments, <code>key=value</code> properties, then an optional <code>{ … }</code> block of children.</p><pre class="kdl">step draft by=llm "Write the draft." { output draft "the first draft" }</pre></div>
+<div><h3>End of a node</h3><p>A newline, <code>;</code> or the parent's <code>}</code> ends a node. A <code>\</code> at the end of a line continues it.</p><pre class="kdl">phase p { step a by=llm; step b by=code }</pre></div>
+<div><h3>Bare words and keywords</h3><p>A word without spaces or <code>(){}[]/\"#;=</code> is a string. It cannot start with a digit. The keywords are <code>#true</code>, <code>#false</code> and <code>#null</code>; a bare <code>true</code>, <code>false</code>, <code>null</code>, <code>inf</code> or <code>nan</code> is an error.</p><pre class="kdl">output draft         // ok
+output 2nd-draft     // error: starts with a digit</pre></div>
+<div><h3>Quoted and raw strings</h3><p><code>"…"</code> holds text with spaces. Its escapes are <code>\n \t \\ \" \s</code> and <code>\u{…}</code>; any other <code>\x</code> is an error. A raw string has no escapes.</p><pre class="kdl">#"text with "quotes""#</pre></div>
+<div><h3>Multi-line strings</h3><p>Open with <code>"""</code> and a line break. Close with <code>"""</code> on its own line; its indent is removed from every line. <code>"""text"""</code> on one line is an error. The page shows lists, <code>`code`</code>, <code>**bold**</code> and <code>*italic*</code> in it.</p><pre class="kdl">step draft by=llm """
+    Group the changes **by type**:
+    - features
+      - new commands
+    - fixes
+    """</pre></div>
+<div><h3>Comments</h3><p><code>//</code> runs to the end of the line. <code>/* … */</code> sits inline. <code>/-</code> before a node comments out the whole node.</p><pre class="kdl">// a comment
+/- step old by=llm</pre></div>
+</div>
+
+<h2 id="h-nodes">2 · Nodes</h2>
+<p>A flow file has only these nodes. A node in the wrong place is an error. Names of phases, steps and decisions are bare words, unique in the file. <code>ref="label"</code> links a node to the part of the skill that has that label.</p>
+<div class="nodes">
+<div class="nrow"><div><h3><code>skillflow</code></h3><p class="where">The first line</p><p>The format version, exactly <code>1.0</code>. Reverse and sync add the stamps <code>skill-version</code> and <code>skillflow-version</code>. <code>skill="path"</code> names the target skill folder.</p></div><pre class="kdl">skillflow 1.0 skill-version="0.2"</pre></div>
+<div class="nrow"><div><h3><code>context</code></h3><p class="where">Right after <code>skillflow 1.0</code>, optional</p><p>Facts about the whole skill: its inputs, outputs and invariants.</p></div><pre class="kdl">context "Drafts release notes." {
+    input tag "the git tag to describe"
+}</pre></div>
+<div class="nrow"><div><h3><code>input</code></h3><p class="where">In <code>context</code></p><p>What the user gives at the start, with a description.</p></div><pre class="kdl">input tag "the git tag to describe"</pre></div>
+<div class="nrow"><div><h3><code>output</code></h3><p class="where">In <code>context</code></p><p>What the skill produces, with a description. A named output must be produced on every path that reaches the end of the flow.</p></div><pre class="kdl">output "a new section in CHANGELOG.md"
+output notes "the release notes"</pre></div>
+<div class="nrow"><div><h3><i data-g="lock"></i> <code>invariant</code></h3><p class="where">In <code>context</code></p><p>A rule that holds during the whole flow. Optional <code>by</code> says who keeps it: <code>code</code> is a script that fails or blocks, <code>human</code> a person at a gate or in a step of their own, <code>llm</code> the model's instructions alone.</p></div><pre class="kdl">invariant by=human "nothing is published without approval"</pre></div>
+<div class="nrow"><div><h3><i data-g="phase"></i> <code>phase</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code></p><p>A group of steps.</p></div><pre class="kdl">phase write "Draft and approve." {
+    step draft by=llm
+}</pre></div>
+<div class="nrow"><div><h3><i data-g="step"></i> <code>step</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>One action. <code>by</code> is required: <code>llm</code> the model, <code>code</code> a script or fixed command, <code>human</code> the user. <code>file=</code> names the script of a code step; <code>skill=</code> names a skill the step loads.</p></div><pre class="kdl">step collect by=code file="scripts/collect.sh"
+step draft by=llm "Group the changes by type."</pre></div>
+<div class="nrow"><div><h3><i data-g="decide"></i> <code>decide</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>A fork of the path: a name, a question and <code>by</code>. At least one <code>when</code> holds a node or an <code>end</code>. With one <code>when</code>, the other outcome is implied and continues below.</p></div><pre class="kdl">decide mode "Which mode?" by=llm {
+    when draft "the draft continues below"
+    when publish { end "nothing to draft" }
+}</pre></div>
+<div class="nrow"><div><h3><i data-g="gate" class="c-human"></i> <code>gate</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>An approval by the user; no <code>by</code>. Two outcomes are implied: <b>approved</b> continues, <b>revise</b> redoes the work before the gate and asks again. A <code>when</code> adds an outcome or overrides an implied one.</p></div><pre class="kdl">gate approved "Did the user approve the draft?" {
+    when rejected { end "stopped without approval" }
+}</pre></div>
+<div class="nrow"><div><h3><code>when</code></h3><p class="where">In <code>decide</code>, <code>gate</code></p><p>One outcome, with prose or a block. After it the flow continues below the <code>decide</code> or <code>gate</code>, unless it reaches <code>end</code>.</p></div><pre class="kdl">when yes { step publish by=code }
+when no "The draft stays local."</pre></div>
+<div class="nrow"><div><h3><i data-g="fail" class="c-fail"></i> <code>on-fail</code></h3><p class="where">In <code>step</code>, at most one</p><p>What happens when the step fails. Unless it reaches <code>end</code>, the flow goes on after the step. An <code>output</code> inside names data that the recovery restores.</p></div><pre class="kdl">step publish by=code {
+    on-fail "Show the error." { end "nothing is published" }
+}</pre></div>
+<div class="nrow"><div><h3><i data-g="end"></i> <code>end</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>The flow stops here. A node after it in the same block is an error.</p></div><pre class="kdl">end "the tag does not exist"</pre></div>
+<div class="nrow"><div><h3><i data-g="tool"></i> <code>tools</code></h3><p class="where">In <code>step</code>, <code>decide</code>, <code>gate</code></p><p>Tools the node uses: MCP, CLI, web and agent tools, such as a question tool. A name may carry its kind: <code>(agent)</code> a subagent, <code>(mcp)</code> a tool of an MCP server.</p></div><pre class="kdl">tools (agent)reviewer (mcp)jira gh</pre></div>
+<div class="nrow"><div><h3><i data-g="input"></i> <code>input</code> <i data-g="output"></i> <code>output</code> in a node</h3><p class="where">In <code>step</code>, <code>decide</code>, <code>gate</code>; <code>output</code> also in <code>when</code> and <code>on-fail</code></p><p><code>output</code> is data the node produces. <code>input</code> is material the skill asks the user for at that node.</p></div><pre class="kdl">output changes "the commits since the last tag"
+input notes "the user's own notes on the release"</pre></div>
+<div class="nrow"><div><h3><i data-g="ask" class="c-ask"></i> <code>// ?</code></h3><p class="where">On its own line above a node</p><p>An unclear place in the skill. The page shows it as ❓ on that card.</p></div><pre class="kdl">// ? how many revision rounds? (SKILL.md:24)</pre></div>
+</div>
+
+<h2 id="h-example">3 · Example</h2>
+<p>A complete flow for an imagined skill <code>release-notes</code>: it drafts release notes for a git tag and adds them to <code>CHANGELOG.md</code>. It uses every node, property, executor and tool kind. Pick a point, or point at a line or a card: the other side shows its match.</p>
+<div id="help-example" class="example">
+<div class="exnotes" role="group" aria-label="Points to notice in the example">
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="collect-changes draft publish announce">Who acts</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="collect-changes size ask-highlights draft">Data is named once</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="size ask-highlights">A fork</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="collect-changes draft">Tool kinds</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="collect-changes publish announce">Three failures</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="draft">A loop is prose</button>
+<button type="button" class="chip exnote" aria-pressed="false" data-ex="approved">Implied outcomes</button>
+<p class="exsay" role="status"></p>
+<p hidden><code>by=code</code> runs a script: <code>collect-changes</code> and <code>publish</code>. <code>by=llm</code> is the model: <code>draft</code>. <code>by=human</code> is work the user does alone: <code>announce</code>.</p>
+<p hidden><code>changes</code>, <code>size</code>, <code>highlights</code> and <code>draft</code> each have one line with a description. <code>highlights</code> is an <code>input</code>: the step asks the user for it.</p>
+<p hidden><code>decide size</code> forks the path. <code>when major</code> holds a step; <code>when regular</code> says in prose why nothing happens. Then both go on to <code>draft</code>.</p>
+<p hidden><code>gh</code> is a CLI and has no kind. <code>(agent)editor</code> is a subagent, and <code>(mcp)jira</code> is a tool of an MCP server.</p>
+<p hidden>The <code>on-fail</code> of <code>collect-changes</code> ends the flow at once. The one of <code>publish</code> reports the error in a step of its own, then ends the flow. The one of <code>announce</code> is one line of prose, and the flow goes on.</p>
+<p hidden>The revision loop is in the prose of <code>draft</code>. A flow has no loop node.</p>
+<p hidden><code>gate approved</code> writes no <code>when approved</code>: approved goes on to <code>publish</code>, and revise sends the draft back. <code>when rejected</code> ends the flow.</p>
+</div>
+</div>
+
+<h2 id="h-best">4 · Best practices</h2>
+<p>Each rule shows the flow to avoid beside the flow to write, each with its graph. Point at a line or a card: the other side shows its match.</p>
+<div class="nodes rules">
+<div class="nrow"><div><h3>Keep only what a reviewer would notice</h3><p>A fact is a node only when its change would show in the result or in the dialogue. All else is prose or stays in the skill.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step draft by=llm "Group the changes by type. Write them to a temp file first; sort it with sort -u." {
+	tools sort
+	output temp-file "the scratch file of the sort"
+}</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step draft by=llm "Group the changes by type."</pre></figure></div></div>
+<div class="nrow"><div><h3>Add a node only where something changes</h3><p>The executor, a question to the user, a branch, or data a reviewer would notice. Model actions in a row are one step.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step read-commits by=llm "Read the commits."
+step group by=llm "Group them by type."
+step write-notes by=llm "Write the notes."
+gate approved "Did the user approve the draft?"</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step draft by=llm "Read the commits; write the notes by type."
+gate approved "Did the user approve the draft?"</pre></figure></div></div>
+<div class="nrow"><div><h3>Say the intent in one sentence</h3><p>Two at most, 200 characters, or one list of up to five items. The details stay in the skill; <code>ref=</code> points to them.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step match by=llm """
+	Read each row of the table. Compare its name with every entry of the register, first by the exact name and then without case.
+	When two entries fit, take the newer one. Write the pairs as a CSV file with a header line.
+	"""</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step match ref="S3" by=llm "Match each row to an entry."</pre></figure></div></div>
+<div class="nrow"><div><h3>Write a loop or a retry as prose</h3><p>A flow has no loop node.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step draft by=llm "Write the draft."
+decide again "Does the user want changes?" by=human {
+	when yes {
+		step redraft by=llm "Write the draft again."
+	}
+}</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step draft by=llm "Write the draft. Revise it until the user approves it."</pre></figure></div></div>
+<div class="nrow"><div><h3>Pick the node by what the human does</h3><p>An approval is a <code>gate</code>. An answer that changes the path is a <code>decide by=human</code>. Any other answer is an <code>input</code> of the node that asks.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>decide tone "Formal or casual?" by=human {
+	when formal "The notes are formal."
+	when casual "The notes are casual."
+}
+step draft by=llm "Write the notes."</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step draft by=llm "Ask for the tone; write the notes." {
+	input tone "formal or casual"
+}</pre></figure></div></div>
+<div class="nrow"><div><h3>Name data once</h3><p>Write <code>output</code> or <code>input</code> where the data first appears, with a description. A later change and a later read are prose.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step collect by=code {
+	output changes "the commits since the last tag"
+}
+step draft by=llm "Group the changes by type." {
+	input changes "the commits"
+	output changes "the grouped commits"
+}</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>step collect by=code {
+	output changes "the commits since the last tag"
+}
+step draft by=llm "Group the changes by type."</pre></figure></div></div>
+<div class="nrow"><div><h3>Make a rule an invariant only when it limits the whole flow</h3><p>Say who keeps it with <code>by=</code>. A rule about the result is prose of the node that makes the result.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>context {
+	invariant "the notes have one section for each type"
+}
+step draft by=llm "Write the notes."</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>context {
+	invariant by=code "build.py refuses an unsigned build"
+}
+step draft by=llm "Write one section for each type."</pre></figure></div></div>
+<div class="nrow"><div><h3>Write a shared failure once</h3><p>A failure that several steps handle the same way is one <code>invariant</code> that names the script. An <code>on-fail</code> holds only the failures of its own step.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step collect by=code {
+	on-fail {
+		end "collect.sh failed"
+	}
+}
+step count by=code {
+	on-fail {
+		end "collect.sh failed"
+	}
+}</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>context {
+	invariant by=llm "When collect.sh fails, report it and end."
+}
+step collect by=code
+step count by=code</pre></figure></div></div>
+<div class="nrow"><div><h3>Mark what the skill does not say</h3><p>Write <code>// ?</code> with the file and line above the node. Do not guess.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>gate approved "Did the user approve the draft? At most three rounds."</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>// ? how many revision rounds? (SKILL.md:24)
+gate approved "Did the user approve the draft?"</pre></figure></div></div>
+<div class="nrow"><div><h3>Run fmt, then validate, after each edit</h3><p><code>fmt</code> lays out the file and changes no word. Each validator message has its line and its fix.</p></div><pre class="cmd">node skillflow.mjs fmt flow.kdl
+node skillflow.mjs validate flow.kdl</pre></div>
+</div>
+
+<h2 id="h-editor">5 · Editor</h2>
+<p><code>skillflowctl edit &lt;skill&gt;</code> opens the flow in the browser. The Source view in Edit mode holds the text, and the graph follows it.</p>
+<ul>
+<li><b>Type.</b> Suggest (Alt+↓ or Ctrl+Space) shows what fits at the cursor. The order of the nodes and the <code>when</code> blocks make the connections.</li>
+<li><b>Problems.</b> Each problem has its line and its fix; F8 goes to the next one. While the text has errors, the graph shows the last valid text.</li>
+<li><b>Save vs export.</b> <b>Save flow</b> (Ctrl+S or ⌘S) writes the flow file. <b>Export review page</b> in the header writes a page for review: the last valid flow and its comments, in one HTML file.</li>
+<li><b>A change on disk.</b> When another program changes the file while the text has unsaved edits, Save shows both versions and writes only the one you choose.</li>
+<li><b>No connection.</b> When the editor server does not answer, the text stays in the page and the editor connects again by itself. Until then, Save writes to a file that you pick, or downloads a copy. A download is not linked to the editor, so the text still counts as unsaved.</li>
+<li><b>History.</b> The bar keeps the edits of this visit until the tab closes. A new edit at an earlier point replaces the later ones; Undo brings the text back.</li>
+<li><b>Keys.</b> Escape, then Tab, leaves the text field.</li>
+</ul>
+
+<footer class="credits" id="h-credits">
+<p>SkillFlow reads a flow file with <a href="https://github.com/bgotink/kdl" rel="noreferrer">@bgotink/kdl</a> <!--kdl-version-->, © Bram Gotink, under the MIT License. A flow file is a <a href="https://kdl.dev/spec/" rel="noreferrer">KDL 2.0.0</a> document.</p>
+<details><summary>License of @bgotink/kdl</summary><pre class="cmd"><!--kdl-license--></pre></details>
+</footer>
+</div>

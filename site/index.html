@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>SkillFlow</title>
+<meta name="description" content="SkillFlow is a declarative language for the intent of an agent skill.">
+<script>
+// a chosen theme applies before the first paint; the flow page keeps its choice under the same key
+try { const t = localStorage.getItem("skillflow-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage is off: the system theme */ }
+</script>
+<style>
+<!--viewer-css-->
+*{box-sizing:border-box}
+html{scroll-padding-top:64px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-16)/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code,pre{font-family:var(--mono)}
+p code,li code,td code,th code,h3 code{font-size:.9em;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:8px;padding-bottom:8px}
+.brand{display:flex;align-items:baseline;gap:8px;color:var(--ink);text-decoration:none;font-weight:700;font-size:var(--fs-17);letter-spacing:-.015em}
+.brand span{font:var(--fs-12)/1 var(--mono);color:var(--muted);letter-spacing:0}
+.top nav{display:flex;gap:6px}
+#theme{margin-left:auto;cursor:pointer}
+.btn[hidden]{display:none}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface-2);color:var(--ink);font:500 var(--fs-13)/1 var(--sans);text-decoration:none}
+.btn:hover{border-color:var(--edge-2)}
+/* on a phone the bar takes two rows, so it scrolls away */
+@media (max-width:599px){.top{position:static}html{scroll-padding-top:0}}
+
+/* sections */
+section{padding:28px 0 8px}
+section+section{border-top:1px solid var(--line);margin-top:20px}
+h1{font-size:clamp(1.6rem,5vw,2.3rem);line-height:1.12;letter-spacing:-.025em;margin:0 0 12px;text-wrap:balance}
+h2{font-size:var(--fs-22);letter-spacing:-.015em;margin:0 0 12px}
+h3{font-size:var(--fs-15);margin:0}
+p{margin:0 0 12px;max-width:40em;color:var(--ink-2)}
+ul,ol{margin:0 0 12px;padding-left:1.3em;color:var(--ink-2);max-width:44em}
+li{margin:4px 0}
+.hint{font-size:var(--fs-14);color:var(--muted)}
+
+/* code */
+pre.kdl{margin:0;padding:10px 12px;background:var(--surface);font-size:var(--fs-12_5);line-height:1.65;tab-size:4;-moz-tab-size:4;overflow-x:auto;color:var(--ink)}
+pre.kdl .ln{border-radius:3px}
+.pane-h{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);font:var(--fs-12)/1.4 var(--mono);color:var(--muted)}
+
+/* tables */
+.tw{overflow-x:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-14)}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+tr:last-child>*{border-bottom:0}
+th{font-weight:650;color:var(--ink);background:var(--surface-2)}
+td{color:var(--ink-2)}
+td:first-child{white-space:nowrap}
+.tw.wide table{min-width:640px}
+
+/* graph parts: the look of the viewer's cards */
+.cv{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 12px;background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:16px 16px}
+.llm{--x:var(--llm);--xs:var(--llm-soft)}.code{--x:var(--code);--xs:var(--code-soft)}.human{--x:var(--human);--xs:var(--human-soft)}
+.n{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;width:100%;max-width:260px;margin:0;padding:6px 10px 7px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;box-shadow:var(--shadow-1)}
+button.n{cursor:pointer}
+.n::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--x)}
+.n i{font:normal 650 var(--fs-10_5)/1 var(--sans);color:var(--x);background:var(--xs);border-radius:4px;padding:2px 5px}
+.n b{font:600 var(--fs-12_5)/1.3 var(--mono)}
+.n .q{width:100%;font-size:var(--fs-12);line-height:1.35;color:var(--ink-2)}
+.n.gate{border:1.5px solid var(--human);background:var(--human-soft)}
+.n.gate::after{content:"GATE";margin-left:auto;font:700 var(--fs-9_5)/1 var(--sans);letter-spacing:.07em;color:var(--human)}
+.n.dec{border-top:3px solid var(--xs)}
+.ed{width:1.5px;height:14px;background:var(--edge);flex:none}
+.ep{display:inline-block;border:1.5px solid var(--end);border-radius:999px;padding:3px 9px;background:var(--surface);color:var(--end);font:650 var(--fs-11)/1.2 var(--mono);text-align:center}
+.ep.fail{border-color:var(--fail);background:var(--fail-soft);color:var(--fail)}
+.fl{display:flex;align-items:center;gap:6px;width:100%;max-width:260px;justify-content:flex-end;font:700 var(--fs-10_5)/1 var(--mono);color:var(--fail)}
+.fl::before{content:"";width:22px;border-top:1.5px dashed var(--fail)}
+.inv{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:4px 11px 4px 9px;font-size:var(--fs-12);color:var(--ink-2)}
+.inv::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--x,var(--edge-2));box-shadow:0 0 0 2.5px var(--xs,var(--line))}
+.ctx{width:100%;max-width:290px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:7px 10px;display:grid;gap:5px;box-shadow:var(--shadow-1)}
+.ctx b{font:600 var(--fs-12)/1.2 var(--mono)}
+.chip{display:inline-block;margin:0 4px 0 0;padding:2px 6px;border-radius:4px;font:600 var(--fs-11)/1.3 var(--mono);background:color-mix(in srgb,var(--input) 14%,var(--surface));color:var(--input)}
+.chip.out{background:color-mix(in srgb,var(--output) 14%,var(--surface));color:var(--output)}
+.pb{width:100%;max-width:310px;border:1px solid var(--line-2);border-radius:12px;background:color-mix(in srgb,var(--phase-ink) var(--phase-a),var(--surface));overflow:hidden}
+.pb>.a{display:flex;gap:7px;align-items:baseline;width:100%;margin:0;padding:6px 11px;border:0;border-bottom:1px solid var(--line-2);background:var(--phase-head);color:var(--ink);font:650 var(--fs-12)/1.2 var(--mono);text-align:left}
+button.a{cursor:pointer}
+.pb>.a span{font:700 var(--fs-9_5)/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.z{display:flex;flex-direction:column;align-items:center;padding:12px 10px}
+.fork{position:relative;display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));width:100%}
+/* the bars join the centers of the first and the last branch */
+.fork::before,.fork::after{content:"";position:absolute;left:calc(50% / var(--n,2));right:calc(50% / var(--n,2));border-top:1.5px solid var(--edge)}
+.fork::before{top:0}.fork::after{bottom:0}.fork.stop::after{display:none}
+.br{display:flex;flex-direction:column;align-items:center;min-width:0;padding:0 4px}
+.br .ed{flex:1 0 10px}
+.lbl{font:600 var(--fs-11)/1.6 var(--mono);color:var(--muted)}
+
+/* section 1: the assembled flow */
+.ex{margin:16px 0 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:var(--fs-13);color:var(--muted)}
+.who{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--x);font:650 var(--fs-12_5)/1 var(--mono);cursor:pointer}
+.who::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--x)}
+.who[aria-pressed=true]{background:var(--xs);border-color:var(--x)}
+.split{display:grid;grid-template-columns:minmax(0,1fr)}
+.split>div{min-width:0}
+@media (min-width:860px){.split{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}.split>div:first-child{border-right:1px solid var(--line)}}
+/* on a phone the graph comes first: the code is long and scrolls */
+@media (max-width:859px){.split>div:first-child{order:1;border-top:1px solid var(--line)}}
+.ex .cv{min-height:100%}
+.ex .n,.ex .a,.ex .ln,.ex .inv,.ex .fl{transition:opacity .15s}
+.ex.hl :is(.ln,[data-node],.inv):not(.on),.ex.hl .fl{opacity:.32}
+.ex.hl .ln.on{background:var(--accent-soft)}
+.ex.hl :is(.n,.a,.inv).on{outline:2px solid var(--accent);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){.ex .n,.ex .a,.ex .ln,.ex .inv{transition:none}}
+
+/* section 2: prose and flow side by side */
+.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 0 16px}
+@media (min-width:760px){.pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.pair>div{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);min-width:0}
+pre.prose{margin:0;padding:10px 12px;font-size:var(--fs-12_5);line-height:1.65;white-space:pre-wrap;color:var(--ink-2)}
+
+/* section 4: one tile per construct */
+.tiles{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:720px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{display:grid;grid-template-columns:minmax(0,1fr) 150px;grid-template-rows:auto 1fr;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;min-width:0}
+.tile>div{padding:10px 12px}
+.tile p{margin:4px 0 0;font-size:var(--fs-14)}
+.tile .cv{grid-row:1;grid-column:2;justify-content:center;margin:0;padding:10px 8px;border-left:1px solid var(--line)}
+.tile .cv .n,.tile .cv .pb{max-width:140px}
+.tile pre.kdl{grid-column:1/-1;border-top:1px solid var(--line);font-size:var(--fs-12)}
+.tile .z{padding:8px 6px}
+@media (max-width:380px){.tile{grid-template-columns:minmax(0,1fr) 128px}.tile .cv .n,.tile .cv .pb{max-width:118px}}
+
+/* section 8 */
+.links{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
+details{margin:0 0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+summary{cursor:pointer;padding:8px 12px;font-size:var(--fs-14);color:var(--ink)}
+details pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);font-size:var(--fs-12);line-height:1.5;white-space:pre-wrap;color:var(--ink-2)}
+footer{padding:24px 0 40px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+<a class="brand" href="#what">SkillFlow <span><!--version--></span></a>
+<button type="button" class="btn" id="theme" hidden><span aria-hidden="true">◐</span><span>Auto</span></button>
+<nav aria-label="Pages"><a class="btn" href="play/">Playground</a><a class="btn" href="flow/">Flow</a><a class="btn" href="https://github.com/skovtunenko/skillflow" rel="noreferrer">GitHub</a></nav>
+</div></header>
+
+<main class="wrap">
+
+<section id="what" aria-labelledby="what-h">
+<h1 id="what-h">What SkillFlow is</h1>
+<p>SkillFlow is an intent-driven DSL: a declarative language for the intent of an agent skill. It is made for skills, not for general workflows. The flow file is the specification; the skill implements it.</p>
+<p class="hint">Select a node or a line to see its pair, or an executor to see its steps.</p>
+<figure class="ex" id="assembled" data-pair aria-label="A flow file and its graph">
+<div class="legend" role="group" aria-label="Show the steps of one executor">
+<button type="button" class="who llm" data-by="llm" aria-pressed="false">by=llm</button>
+<button type="button" class="who code" data-by="code" aria-pressed="false">by=code</button>
+<button type="button" class="who human" data-by="human" aria-pressed="false">by=human</button>
+</div>
+<div class="split">
+<div><div class="pane-h">release-notes.kdl</div><pre class="kdl" tabindex="0" aria-label="Flow file release-notes.kdl"><code><!--flow-pair:release-notes--></code></pre></div>
+<div class="cv"><!--graph-pair:release-notes--></div>
+</div>
+</figure>
+</section>
+
+<section id="why" aria-labelledby="why-h">
+<h2 id="why-h">Why the language exists</h2>
+<p>Most workflow languages are imperative, or need a runtime that executes them. SkillFlow is neither: a flow file states intent, and nothing executes it.</p>
+<p>Andrej Karpathy calls programs written as natural-language prompts Software 3.0. A skill is such a program, combined with deterministic code. In a flow, each node names who acts.</p>
+<div class="pair">
+<div><div class="pane-h">SKILL.md<span>prose</span></div><pre class="prose" tabindex="0" aria-label="Part of a SKILL.md file">Run `scripts/collect.sh &lt;tag&gt;`. If it exits with a non-zero code, the tag does not exist: tell the user and stop.
+
+Load the style-guide skill. Group the changes by type: features first, then fixes.</pre></div>
+<div><div class="pane-h">flow.kdl<span>intent</span></div><pre class="kdl" tabindex="0" aria-label="The same part as a flow"><code><!--flow-body:why--></code></pre></div>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Constraint of a conversation with a model</th><th>Where the language shows it</th></tr></thead>
+<tbody><tr><td style="white-space:normal">Text that enters the context stays there until the session resets or the conversation is compacted.</td><td><code>skill=</code> on a step runs another skill. Its instructions stay loaded for every node after that step.</td></tr></tbody>
+</table></div>
+</section>
+
+<section id="principles" aria-labelledby="principles-h">
+<h2 id="principles-h">Basic principles</h2>
+<ol>
+<li>One flow file describes exactly one skill.</li>
+<li>The flow file is the source of truth; the skill implements it.</li>
+<li>Sync works in both directions: flow to skill, or skill to flow.</li>
+<li>A flow states intent: steps, decisions, data, dialogue with the user, invariants, and failures, without low-level detail.</li>
+<li>Each step and decision names who acts: <code>by=llm</code>, <code>by=code</code>, or <code>by=human</code>.</li>
+</ol>
+</section>
+
+<section id="language" aria-labelledby="language-h">
+<h2 id="language-h">The language by example</h2>
+<div class="tw"><table>
+<thead><tr><th>Executor</th><th>Who acts</th></tr></thead>
+<tbody>
+<tr><td><code>by=llm</code></td><td>the model, subagents included</td></tr>
+<tr><td><code>by=code</code></td><td>a bundled script or a fixed command whose result needs no judgment</td></tr>
+<tr><td><code>by=human</code></td><td>the user, who decides or acts</td></tr>
+</tbody>
+</table></div>
+<div class="tiles">
+<article class="tile"><div><h3><code>context</code></h3><p>Facts about the whole skill.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:context--></figure>
+<pre class="kdl" tabindex="0" aria-label="context example"><code><!--flow-body:context--></code></pre></article>
+
+<article class="tile"><div><h3><code>phase</code></h3><p>A named group of steps.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:phase--></figure>
+<pre class="kdl" tabindex="0" aria-label="phase example"><code><!--flow-body:phase--></code></pre></article>
+
+<article class="tile"><div><h3><code>step</code></h3><p>One action, and who does it.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:step--></figure>
+<pre class="kdl" tabindex="0" aria-label="step example"><code><!--flow-body:step--></code></pre></article>
+
+<article class="tile"><div><h3><code>decide</code> + <code>when</code></h3><p>A fork of the path; each <code>when</code> is one outcome.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:decide--></figure>
+<pre class="kdl" tabindex="0" aria-label="decide example"><code><!--flow-body:decide--></code></pre></article>
+
+<article class="tile"><div><h3><code>gate</code></h3><p>A person approves; <code>approved</code> and <code>revise</code> are implied.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:gate--></figure>
+<pre class="kdl" tabindex="0" aria-label="gate example"><code><!--flow-body:gate--></code></pre></article>
+
+<article class="tile"><div><h3><code>on-fail</code></h3><p>What happens when a step fails.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:on-fail--></figure>
+<pre class="kdl" tabindex="0" aria-label="on-fail example"><code><!--flow-body:on-fail--></code></pre></article>
+
+<article class="tile"><div><h3><code>end</code></h3><p>An early exit: the flow stops here.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:end--></figure>
+<pre class="kdl" tabindex="0" aria-label="end example"><code><!--flow-body:end--></code></pre></article>
+
+<article class="tile"><div><h3><code>invariant</code></h3><p>A rule for the whole flow, and who keeps it.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:invariant--></figure>
+<pre class="kdl" tabindex="0" aria-label="invariant example"><code><!--flow-body:invariant--></code></pre></article>
+</div>
+</section>
+
+<section id="modes" aria-labelledby="modes-h">
+<h2 id="modes-h">Modes</h2>
+<p>The flow file is the specification. Reverse exists to make the first flow, and for the case where the skill has moved ahead of its flow.</p>
+<div class="tw wide" tabindex="0" role="region" aria-label="Modes that an agent runs"><table>
+<thead><tr><th>Say to the agent</th><th>Use it for</th><th>Source of truth</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>skillflow reverse</code></td><td>a skill that has no flow file, or an explicit rebuild</td><td>the skill, as it works now</td><td>a flow file for the skill</td></tr>
+<tr><td><code>skillflow author</code></td><td>a flow for a new skill, or a flow edited in dialogue</td><td>the documents and the answers of the person</td><td>a new or edited flow file</td></tr>
+<tr><td><code>skillflow check</code></td><td>to know whether the skill still matches its flow</td><td>none: the mode compares the flow with the skill</td><td>a report; no file changes</td></tr>
+<tr><td><code>skillflow sync</code></td><td>to bring the flow and the skill back in line, after check</td><td>for each difference, the side that the person chooses</td><td>edits to the flow file or to the skill</td></tr>
+<tr><td><code>skillflow explain</code></td><td>the flow explained, shown as a page, or two versions compared</td><td>the flow file</td><td>an explanation, an HTML page, or a comparison</td></tr>
+<tr><td><code>skillflow help</code></td><td>how to use SkillFlow or how to write a flow</td><td>not applicable</td><td>an answer about SkillFlow</td></tr>
+</tbody>
+</table></div>
+<div class="tw" tabindex="0" role="region" aria-label="Commands that a person runs without an agent"><table>
+<thead><tr><th>Run <code>skillflowctl</code></th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>page</code></td><td style="white-space:normal">formats and validates the flow, then writes its HTML page</td></tr>
+<tr><td><code>lint</code></td><td style="white-space:normal">checks the format and validates the flow; writes nothing</td></tr>
+<tr><td><code>edit</code></td><td style="white-space:normal">starts a server on the local computer; you edit the flow in the browser, and the graph follows the text</td></tr>
+<tr><td><code>edit --offline</code></td><td style="white-space:normal">writes the editor as one page that needs no server, like the <a href="play/">Playground</a></td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section id="kdl" aria-labelledby="kdl-h">
+<h2 id="kdl-h">Why KDL</h2>
+<p>A flow file is a KDL 2.0.0 document.</p>
+<div class="tw wide" tabindex="0" role="region" aria-label="KDL compared with Markdown and Markdoc"><table>
+<caption class="hint" style="caption-side:bottom;text-align:left;padding:8px 12px">— not compared</caption>
+<thead><tr><th></th><th>KDL 2.0</th><th>Structured Markdown</th><th>Markdoc</th></tr></thead>
+<tbody>
+<tr><th scope="row">Skeleton for a script</th><td>Nodes, arguments, properties, and child blocks; a parser returns the tree</td><td>Own conventions and an own parser; only a linter catches "almost right" text</td><td>Tags <code>{% tag %}</code> on Markdown nodes</td></tr>
+<tr><th scope="row">Parsers</th><td>In Python and JavaScript; SkillFlow ships one with no dependencies</td><td>None for these conventions</td><td>Official one in JavaScript only</td></tr>
+<tr><th scope="row">Schema</th><td>No final schema language for 2.0; SkillFlow's validator checks the node vocabulary</td><td>—</td><td>—</td></tr>
+<tr><th scope="row">Stability</th><td>2.0.0 is final, released 2024-12-21</td><td>—</td><td>Version 0.x</td></tr>
+<tr><th scope="row">Reading by a domain expert</th><td>Brackets and quotes are visible</td><td>Reads as a document</td><td>—</td></tr>
+<tr><th scope="row">Prose inside a node</th><td>In <code>"""</code> strings, without Markdown highlighting</td><td>Natural, under a list item</td><td>—</td></tr>
+<tr><th scope="row">Written by a model</th><td>A model may write KDL 1 forms, such as <code>true</code> for <code>#true</code>; the parser rejects them</td><td>Models write it with confidence; a linter catches drift from the conventions</td><td>—</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section id="licenses" aria-labelledby="licenses-h">
+<h2 id="licenses-h">Licenses</h2>
+<p>Each page that SkillFlow renders shows the third-party notices in its Help view.</p>
+<!--license-notices-->
+</section>
+
+<section id="start" aria-labelledby="start-h">
+<h2 id="start-h">Start</h2>
+<p>Copy the folder <code>skills/skillflow</code> of the repository into the skills folder of your agent. It needs Node.js 22 or later; no packages, no network.</p>
+<p>Then ask the agent <code>skillflow help</code>, or run <code>&lt;skills-folder&gt;/skillflow/skillflowctl page &lt;skill&gt;</code> yourself.</p>
+<div class="links"><a class="btn" href="play/">Playground</a><a class="btn" href="flow/">The flow of SkillFlow</a><a class="btn" href="https://github.com/skovtunenko/skillflow" rel="noreferrer">GitHub</a></div>
+</section>
+
+</main>
+<script>
+// theme: auto has no attribute, so the page follows the system; a choice is kept in this browser
+const THEMES = ["auto", "light", "dark"], themeBtn = document.getElementById("theme"), root = document.documentElement;
+let theme = Math.max(0, THEMES.indexOf(root.dataset.theme));
+const showTheme = () => {
+  const t = THEMES[theme];
+  if (theme) root.dataset.theme = t; else delete root.dataset.theme;
+  themeBtn.lastChild.textContent = t[0].toUpperCase() + t.slice(1);
+  themeBtn.setAttribute("aria-label", `${["Auto theme, follows the system", "Light theme", "Dark theme"][theme]}. Switch to ${THEMES[(theme + 1) % 3]}.`);
+};
+themeBtn.addEventListener("click", () => {
+  theme = (theme + 1) % 3;
+  try { localStorage.setItem("skillflow-theme", THEMES[theme]); } catch { /* storage is off: the choice lasts for this page */ }
+  showTheme();
+});
+themeBtn.hidden = false;
+showTheme();
+
+for (const fig of document.querySelectorAll("[data-pair]")) {
+  let pin = "";
+  const keyOf = (el) => (el.dataset.node ? "node=" + el.dataset.node : "by=" + el.dataset.by);
+  const show = (key) => {
+    const [k, v] = key.split("=");
+    fig.classList.toggle("hl", !!key);
+    for (const el of fig.querySelectorAll(".ln,[data-node],[data-by]")) el.classList.toggle("on", !!key && el.dataset[k] === v);
+  };
+  fig.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-node],button[data-by]");
+    if (!t) return;
+    pin = pin === keyOf(t) ? "" : keyOf(t);
+    for (const b of fig.querySelectorAll("button")) b.setAttribute("aria-pressed", String(keyOf(b) === pin));
+    show(pin);
+  });
+  fig.addEventListener("mouseover", (e) => { const t = e.target.closest("[data-node]"); show(t ? keyOf(t) : pin); });
+  fig.addEventListener("mouseleave", () => show(pin));
+  fig.addEventListener("focusin", (e) => { const t = e.target.closest("[data-node]"); if (t) show(keyOf(t)); });
+  fig.addEventListener("focusout", () => show(pin));
+}
+</script>
+</body>
+</html>

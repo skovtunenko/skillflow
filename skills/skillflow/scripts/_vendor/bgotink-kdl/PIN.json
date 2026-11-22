@@ -1,0 +1,38 @@
+{
+  "package": "@bgotink/kdl",
+  "version": "0.4.2",
+  "tarball": "https://registry.npmjs.org/@bgotink/kdl/-/kdl-0.4.2.tgz",
+  "integrity": "sha512-g0Atx31WrqePx0PMyBQ+GWTKRzrZpfj7K+wrcmGRpeNpsgz/U1iQIYIkGsZdCM9+zEQ7ADzOuQBcPiQKQoRCVw==",
+  "suite": {
+    "url": "https://codeload.github.com/kdl-org/kdl/tar.gz/refs/tags/2.0.0",
+    "sha256": "44b6b07b37baa306b6bbf03955b89086a6d9c5f5049e60191c36a7e4595e0352",
+    "minimum": 318,
+    "agree": 318,
+    "total": 319
+  },
+  "files": {
+    "LICENSE.md": "ac45da81cf63f9ecc267530ec9a551b98ac36305b59f91b652cd688a81718948",
+    "clear-format.js": "8e97ac5f88a364dfeb69add52e6c775d6563e231267cac0584a879aa4e383f72",
+    "error.js": "074411ae26124b0529e8c5f2f7b793c5d3ea2faf780d9b3cbd66d112c7c7d0a0",
+    "flags.js": "79254a2c1305dc6983775f1e4c4dda09966efdc3d2e1a5ae7a5334912a108437",
+    "format.js": "44e8fe049f10d4d29822cb02d931abda8cd4128231a4e6361add69b1fb03e72b",
+    "index.js": "1ded7a19743fbdd5f22bcd3fc1f98d0ca0dba91b556bc219cc110e5501c05c04",
+    "locations.js": "89412bc7650e208b0b0093b6eab3524c6acfcbeb6969bed66d10fe64b1a313eb",
+    "model.js": "81261dd9ba37cbd59c44a5dba458b9d3653a95f404a9a4f1d2056b350a15d944",
+    "model/document.js": "34226217b9547e5c40d808c95676ec250dfee0da0065a6b37a5a619dd501a470",
+    "model/entry.js": "04e26aedff030840694ebb33328b2967276c0d7a994e59b5b44cd7960e283b91",
+    "model/identifier.js": "e32e693ad3db50602e9c284fa65f6264f3444d71928f72ce48943b6a6e497d41",
+    "model/node.js": "083074a9158ab50d00d314ae7baf73aaa46f890f691dcbcedec71b1294bad8be",
+    "model/tag.js": "d505b4ccc12f025612e58f535aee1537079da7a17532fec0645fb47caf5cf105",
+    "model/utils.js": "00eaca76b7025803896c2610658845a8641428d508ed9cb9ed4340cad340ad4b",
+    "model/value.js": "2217404674b4d84a711ff569c4260c6233048c7cc5f4835582259bb29110dc3a",
+    "parse.js": "f5c78bd5f1c2eb4406bb9042098b9b9e89f613337e58c12f36acf7ba648d31d0",
+    "parser/parse-whitespace.js": "b17440e9665edf34d007935ed0a84bb4e69bb3caa21af8c9bb68cc25d3adc2bb",
+    "parser/parse.js": "ae800e3abc5f4a121e1fed648023e6f14f464e30c49358eade80d5010c375589",
+    "parser/tokenize.js": "1fc06e436900e7b10c05cddc6f3c6335a996cb3265be1c4b34d93463cc091e0f",
+    "parser/tokenize/context.js": "a739f96105eadd29a1ed5d40cbda05e93658b1cfea26824475bce9768e70a9ce",
+    "parser/tokenize/tokenize.js": "afed550388f2513c7e59f02529b2e989541625db9949a8f1062c3f168f1f2a1a",
+    "parser/tokenize/types.js": "ce7a1698e8a6c33d65055b1f0ac1297860874798d11bb12a06a83309d9ae14bf",
+    "string-utils.js": "c144e991067fabf3f7e33891cf608d30b0671a8ee219ba113288972b571c7032"
+  }
+}

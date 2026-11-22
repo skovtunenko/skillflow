@@ -1,0 +1,9 @@
+skillflow 1.0
+
+decide size "Is this a major release?" by=llm {
+	when major {
+		step ask-highlights by=llm
+	}
+
+	when regular "No highlights."
+}

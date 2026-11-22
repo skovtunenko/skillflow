@@ -1,0 +1,66 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": null,
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 0,
+  "step": 1,
+  "decide": 0,
+  "end": 0,
+  "by": {
+   "llm": 1
+  },
+  "unclear": 0
+ },
+ "context": {
+  "purpose": "",
+  "inputs": [
+   {
+    "name": "ghost",
+    "text": "g",
+    "line": 3
+   }
+  ],
+  "outputs": [],
+  "invariants": [],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "step",
+   "line": 5,
+   "name": "x",
+   "by": "llm",
+   "question": "",
+   "prose": "",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [
+    "ghost"
+   ],
+   "outputs": [],
+   "onfail": null
+  }
+ ],
+ "data": {
+  "ghost": {
+   "input": "g",
+   "output": null,
+   "outputOf": [],
+   "inputOf": [
+    "n1"
+   ],
+   "mentionOf": [],
+   "mentionAt": {}
+  }
+ },
+ "tools": {},
+ "unclear": [],
+ "sourceText": "skillflow 1.0\ncontext {\n    input ghost \"g\"\n}\nstep x by=llm {\n    input ghost\n}\n",
+ "example": null
+}

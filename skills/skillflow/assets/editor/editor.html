@@ -1,0 +1,50 @@
+<div class="sfe" id="sfe">
+  <div class="sfe-bar" id="sfe-bar">
+    <div class="sfe-hist" role="group" aria-label="History of this visit">
+      <button type="button" class="icon-btn" id="h-back" aria-label="Earlier edit" data-tip="Go to the edit before this one. A new edit there replaces the later ones"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <div class="track"><div id="ticks"></div><input type="range" id="scrub" min="0" max="0" value="0" aria-label="History: the edits of this visit"></div>
+      <button type="button" class="icon-btn" id="h-fwd" aria-label="Later edit" data-tip="Go to the edit after this one"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg></button>
+      <span id="tlabel"></span>
+    </div>
+    <div class="sfe-acts">
+      <div class="sfe-aids tray" role="group" aria-label="Text tools">
+        <button type="button" class="tb" id="ask" aria-label="Suggest" data-tip="Show what fits at the cursor (Alt+↓ or Ctrl+Space)"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3v10M3 3h3M3 13h3M9 6.5h4.5M9 9.5h4.5M9 12.5h2.5"/></svg><span class="lbl">Suggest</span></button>
+        <label class="tog" data-tip="Open the list by itself while you type. Off: only Suggest and its keys open it"><input type="checkbox" role="switch" id="auto" checked>As you type</label>
+        <i class="sep"></i>
+        <button type="button" class="tb" id="ws" aria-pressed="false" aria-label="Show spaces and tabs" data-tip="Show spaces as dots and tabs as arrows"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 3H7a2.75 2.75 0 0 0 0 5.5h1.5M8.5 3v10M11 3v10"/></svg></button>
+        <i class="sep"></i>
+        <button type="button" class="tb" id="fmt" aria-label="Format" data-tip="Rewrite the text in the standard SkillFlow layout (Alt+Shift+F)"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10M7 8h6M3 12.5h10M3 6.2 4.8 8 3 9.8"/></svg><span class="lbl">Format</span></button>
+      </div>
+      <span id="st-file" role="status"></span>
+      <div class="tray sfe-file" role="group" aria-label="Flow file">
+        <button type="button" class="btn" id="save" aria-label="Save flow" data-tip="Write the text to the flow file (Ctrl+S or ⌘S). Export review page in the header writes a page for review instead"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h8.2l2.3 2.3v8.7H3zM5.2 2.5v3h4.6v-3M5.2 13.5V9.3h5.6v4.2"/></svg><span class="lbl">Save flow</span></button>
+        <button type="button" class="btn" id="link" data-tip="Pick the flow file on this computer: Save then writes to it" hidden>Link to file</button>
+        <button type="button" class="btn" id="dl-flow" data-tip="Download the text as a flow file" hidden>Download flow</button>
+      </div>
+    </div>
+  </div>
+  <div class="ed"><div id="gutter" aria-hidden="true"></div>
+    <div class="edcode"><div id="hl" aria-hidden="true"></div><textarea id="src" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" aria-label="Flow text" aria-describedby="keys" aria-autocomplete="list" aria-controls="pop"></textarea><ul id="pop" role="listbox" aria-label="Suggestions" hidden></ul></div><div id="ruler" aria-hidden="true"></div></div>
+  <div class="problems" id="pbox">
+    <div class="pbar">
+      <button type="button" id="p-toggle" aria-expanded="true" aria-controls="problems" data-tip="Show or hide the list of problems"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg><span>Problems</span></button>
+      <span id="st-main">…</span>
+      <span class="pgap"></span>
+      <button type="button" class="icon-btn" id="p-prev" aria-label="Previous problem" data-tip="Previous problem (Shift+F8 or Alt+,)"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></button>
+      <button type="button" class="icon-btn" id="p-next" aria-label="Next problem" data-tip="Next problem (F8 or Alt+.)"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>
+      <span id="pcount"></span>
+    </div>
+    <p class="vh" id="p-say" role="status"></p><ul id="problems" aria-label="Problems"></ul>
+  </div>
+  <p class="vh" id="keys">Ctrl or ⌘ with S saves. Ctrl or ⌘ with Enter draws again. Alt+Shift+F formats. F8 goes to the next problem. Alt with the Down arrow shows what fits at the cursor. Escape, then Tab leaves the text.</p>
+  <p class="vh" id="pop-say" aria-live="polite"></p>
+</div>
+<dialog id="conflict" aria-labelledby="cf-title">
+  <h2 id="cf-title"></h2>
+  <p><span id="cf-why"></span> Nothing is saved yet. The marked lines differ. Choose the version to keep.</p>
+  <div class="versions">
+    <section><h3>On disk</h3><div class="version" id="cf-disk" tabindex="0" role="region" aria-label="The version on disk"></div></section>
+    <section><h3>In this editor</h3><div class="version" id="cf-mine" tabindex="0" role="region" aria-label="The version in this editor"></div></section>
+  </div>
+  <form method="dialog"><button class="btn" value="later">Decide later</button><button class="btn" value="disk">Use the disk version</button><button value="mine" class="btn primary">Save my version</button></form>
+</dialog>

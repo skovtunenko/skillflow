@@ -1,0 +1,6 @@
+OK <TMP>/flow.kdl · 1 warning
+  phases 0 · steps 2 · decisions 0 · ends 0 · executors: llm 2 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:3: warning: output `данные` has no description (hint: say what it is where it first appears: output данные "…")

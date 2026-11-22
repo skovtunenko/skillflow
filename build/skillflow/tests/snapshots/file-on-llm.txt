@@ -1,0 +1,6 @@
+FAIL <TMP>/flow.kdl · 1 error
+  phases 0 · steps 1 · decisions 0 · ends 0 · executors: llm 1 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:2: error: `file=` is only for code steps (hint: name reference files in the step's prose)

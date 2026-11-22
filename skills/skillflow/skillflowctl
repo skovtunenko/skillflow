@@ -1,0 +1,4 @@
+#!/bin/sh
+# skillflowctl: the SkillFlow CLI for a person; `skillflowctl help` lists the commands.
+export SKILLFLOW_PROG=skillflowctl
+exec node "$(dirname "$(realpath "$0")")/scripts/skillflow.mjs" "$@"

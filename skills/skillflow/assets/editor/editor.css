@@ -1,0 +1,160 @@
+/* The editor of an edit page. It sits in the Source view of the viewer and takes the viewer's colours (assets/viewer.css),
+   so the theme button changes both. */
+/* the editor's box: main.mjs lays it over the Source view's place for it; under the toast and every dialog */
+#sf-park{position:fixed;z-index:2;left:0;top:0;width:0;height:0;display:flex;overflow:hidden;visibility:hidden}
+#sf-park.on{visibility:visible}
+@media print{#sf-park{display:none}}
+/* the text settings of .ed are measured from the first prototype and pinned by a browser test: change them only on purpose */
+.sfe{container:sfe/size;flex:1;min-width:0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;background:var(--surface);-webkit-font-smoothing:auto;--lh:20px;--err:var(--fail);--warn:var(--ask);--todo:var(--llm)}
+.sfe-bar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-12);color:var(--ink-2)}
+/* the history of this visit: one mark for each edit, green when the text was valid; the buttons step, the slider jumps */
+.sfe-hist{flex:1 1 200px;min-width:150px;display:flex;align-items:center;gap:6px}
+.track{position:relative;flex:1;min-width:48px;height:24px}
+#ticks{position:absolute;inset:9px 3px;display:flex;gap:1px;pointer-events:none}
+#ticks i{flex:1;border-radius:2px;background:var(--output);opacity:.45}#ticks i.t-bad{background:var(--err)}#ticks i.t-on{opacity:1}
+/* the marks are the slider's track: the browser's own track would cover them */
+#scrub{-webkit-appearance:none;appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;background:none;cursor:pointer}
+#scrub::-webkit-slider-runnable-track{height:24px;background:none}
+#scrub::-moz-range-track{height:24px;background:none}
+#scrub::-webkit-slider-thumb{-webkit-appearance:none;width:6px;height:18px;margin-top:3px;border-radius:3px;background:var(--accent-fill);box-shadow:0 0 0 2px var(--surface),0 1px 3px rgb(0 0 0 / .3)}
+#scrub::-moz-range-thumb{width:6px;height:18px;border:0;border-radius:3px;background:var(--accent-fill);box-shadow:0 0 0 2px var(--surface),0 1px 3px rgb(0 0 0 / .3)}
+.sfe-hist .icon-btn{background:none}
+@media (hover:hover){.sfe-hist .icon-btn:hover{background:var(--surface-2)}}
+@media (forced-colors:active){#scrub::-webkit-slider-thumb{background:Highlight}#scrub::-moz-range-thumb{background:Highlight}}
+#tlabel{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+/* the group may get narrower than its parts, which then go to a next row: no button is cut at the edge */
+.sfe-acts{flex:0 1 auto;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 8px;margin-left:auto}
+/* the helps for the text in a tray (viewer.css .tray): hairlines part what fits here and whether the list comes by itself, the marks of spaces, and Format */
+/* a switch: the knob's side says the state, and the colour says it again */
+.sfe .tog{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px 0 4px;border-radius:8px;cursor:pointer;white-space:nowrap;font-weight:500}
+.sfe .tog:has(input:not(:checked)){color:var(--muted)}
+.tog input{-webkit-appearance:none;appearance:none;flex:none;position:relative;width:26px;height:16px;margin:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 85%,transparent);cursor:pointer;transition:background-color .15s}
+.tog input::before{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .3);transition:transform .15s cubic-bezier(.3,.9,.3,1)}
+.tog input:checked{background:var(--accent-fill)}
+.tog input:checked::before{transform:translateX(10px)}
+@media (hover:hover){.sfe .tog:hover{background:var(--surface-2);color:var(--ink)}}
+@media (forced-colors:active){.tog input{border:1px solid ButtonText;background:Canvas}.tog input::before{background:ButtonText}.tog input:checked{background:Highlight}}
+#st-file{color:var(--muted);white-space:nowrap}
+html[data-dirty] #st-file,html[data-outside] #st-file{color:var(--human);font-weight:600}
+html[data-save-error] #st-file{color:var(--fail);font-weight:600}
+html[data-dirty] #save{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink);font-weight:600}
+.sfe button:focus-visible,.sfe input:focus-visible,#conflict .version:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.ed{position:relative;flex:1 1 0;min-height:7lh;display:grid;grid-template-columns:auto 1fr 16px;font:13px/var(--lh) ui-monospace,"SF Mono",Menlo,Consolas,monospace;tab-size:4}
+#gutter{overflow:hidden;padding:10px 0;color:var(--muted);text-align:right;user-select:none;background:var(--surface-2);border-right:1px solid var(--line);min-width:52px}
+#gutter .gl{height:var(--lh);padding:0 10px 0 22px;position:relative;font-variant-numeric:tabular-nums}
+#gutter .gl.cur{color:var(--ink);font-weight:600}
+.mk{position:absolute;left:7px;top:6px;width:9px;height:9px;border-radius:50%;cursor:pointer}
+.mk-error{background:var(--err)}.mk-warning{background:var(--warn);border-radius:2px}.mk-todo{background:var(--todo);transform:rotate(45deg);border-radius:1px}
+.edcode{position:relative;min-width:0;min-height:0}
+/* a map of the whole text: a mark for each problem line at that line's place, and a shade over the part in view; a press goes there.
+   The keyboard has F8 for the same steps */
+#ruler{position:relative;margin:10px 0;border-left:1px solid var(--line);background:var(--surface-2);cursor:pointer}
+.rshade{position:absolute;left:0;right:0;min-height:8px;background:color-mix(in srgb,var(--ink) 9%,transparent);pointer-events:none}
+#ruler i{position:absolute;left:2px;right:2px;height:6px;margin-top:-3px;border-radius:2px;box-shadow:0 0 0 1px var(--surface);transition:transform .1s}
+#ruler i::before{content:"";position:absolute;inset:-4px -2px}
+@media (hover:hover){#ruler i:hover{transform:scale(1.25,1.5)}}
+#ruler i.on{box-shadow:0 0 0 1px var(--surface),0 0 0 3px var(--accent)}
+.rk-error{background:var(--err)}.rk-warning{background:var(--warn)}.rk-todo{background:var(--todo)}
+#hl,#src{position:absolute;inset:0;margin:0;padding:10px 14px;font:inherit;tab-size:4;white-space:pre;overflow:hidden;border:0;letter-spacing:0}
+#hl{color:var(--ink)}
+#hl .l{height:var(--lh);padding-right:14px;width:max-content;min-width:100%}
+#hl .l.cur{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+#src{overflow:auto;background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:none;z-index:1}
+#src:focus-visible{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 55%,transparent)}
+#src::selection{background:color-mix(in srgb,var(--accent) 28%,transparent);color:transparent}
+.sq-error{text-decoration:underline wavy var(--err) 1px;text-underline-offset:4px;background:color-mix(in srgb,var(--err) 7%,transparent)}
+.sq-warning{text-decoration:underline wavy var(--warn) 1px;text-underline-offset:4px}
+.sq-todo{text-decoration:underline dotted var(--todo) 1.5px;text-underline-offset:4px}
+#flash{position:absolute;left:0;right:0;height:var(--lh);pointer-events:none;opacity:0}
+#flash.go{animation:sfeFlash 1.2s ease-out}
+@keyframes sfeFlash{0%{opacity:1;background:color-mix(in srgb,var(--accent) 30%,transparent)}100%{opacity:0}}
+
+/* the list gives its room back before the text goes below seven lines, and folds to its bar */
+.problems{flex:0 1 auto;min-height:0;max-height:32%;display:flex;flex-direction:column;border-top:1px solid var(--line);font-size:var(--fs-12)}
+.pbar{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;color:var(--muted)}
+#p-toggle{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 6px 0 2px;border:0;border-radius:6px;background:none;color:inherit;font:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+#p-toggle .g{transition:transform .15s}#p-toggle[aria-expanded=false] .g{transform:rotate(-90deg)}
+@media (hover:hover){#p-toggle:hover{color:var(--ink);background:var(--surface-2)}}
+#st-main{font:700 var(--fs-11_5)/1.5 var(--mono);padding:1px 8px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+html[data-status=ok] #st-main{color:var(--output);background:color-mix(in srgb,var(--output) 12%,transparent)}html[data-status=fail] #st-main{color:var(--err);background:var(--fail-soft)}
+html[data-status=draft] #st-main{color:var(--todo);background:color-mix(in srgb,var(--todo) 12%,transparent)}
+.pgap{flex:1}
+.pbar .icon-btn{width:28px;height:24px}.pbar .icon-btn:disabled{opacity:.45;cursor:default}
+#pcount{min-width:9ch;text-align:right;text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+#problems{flex:1 1 auto;min-height:0;overflow:auto;list-style:none;margin:0;padding:0 0 6px;scrollbar-width:thin}
+.problems.shut #problems{display:none}
+#problems li{position:relative;font-size:var(--fs-12_5)}
+#problems button,#problems .p-ok{display:block;width:100%;padding:4px 12px 4px 26px;border:0;border-radius:0;background:none;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+#problems .p-ok{cursor:default}
+@media (hover:hover){#problems button:hover{background:var(--surface-2)}}
+#problems button:focus-visible{outline-offset:-2px}
+/* the shown problem: a bar as well as a tint */
+#problems button[aria-current]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+#problems li::before{content:"";position:absolute;left:11px;top:10px;width:8px;height:8px;border-radius:50%;pointer-events:none}
+#problems li b{font-weight:600;text-transform:uppercase;font-size:var(--fs-10_5);letter-spacing:.05em}
+#problems code{font-family:var(--mono)}
+.p-error::before{background:var(--err)}.p-error b{color:var(--err)}.p-warning::before{background:var(--warn)}.p-warning b{color:var(--warn)}
+.p-todo::before{background:var(--todo)}.p-todo b{color:var(--todo)}li:has(.p-ok)::before{background:var(--output)}#problems .p-ok{color:var(--output)}
+#problems .hint{color:var(--muted)}
+
+/* over the graph while the text has errors: the graph is the one of the last valid text */
+.gstale{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:5;max-width:calc(100% - 24px);padding:6px 14px;border-radius:999px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--fail-soft);color:var(--fail);border:1px solid color-mix(in srgb,var(--fail) 40%,transparent);font-weight:600;font-size:var(--fs-12_5);box-shadow:var(--shadow-1)}
+.gstale button{display:block;max-width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+@media (hover:hover){.gstale:hover{border-color:var(--fail)}.gstale button:hover{text-decoration:underline}}
+
+#conflict{width:min(1180px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-2)}
+#conflict[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px}
+#conflict::backdrop{background:#0f111799}
+#conflict h2{margin:0;font-size:var(--fs-17)}#conflict p{margin:0;color:var(--muted);max-width:75ch}
+.versions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-height:0}
+.versions section{display:grid;grid-template-rows:auto minmax(0,1fr);gap:6px;min-height:0}
+.versions h3{margin:0;font-size:var(--fs-12);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.version{overflow:auto;max-height:56dvh;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:13px/20px ui-monospace,"SF Mono",Menlo,Consolas,monospace;tab-size:4;white-space:pre;padding:6px 0}
+.version .l{min-height:20px;padding-right:12px;border-left:3px solid transparent;width:max-content;min-width:100%}
+.version .l i{display:inline-block;width:5ch;padding-right:1.5ch;text-align:right;font-style:normal;color:var(--muted);user-select:none;font-variant-numeric:tabular-nums}
+.version .l.chg{background:color-mix(in srgb,var(--warn) 16%,transparent);border-left-color:var(--warn)}
+#conflict form{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+/* beside the graph the bar keeps one row: the time of the edit is then the slider's tip */
+@container sfe (max-width:760px){#tlabel,#save .lbl,.sfe-aids .tb .lbl{display:none}.sfe-hist{flex-basis:130px;min-width:130px}}
+@media (max-width:760px){
+  /* three rows: the mode and Save; the history; the helps for the text and the file's state */
+  .sfe-acts{display:contents}
+  .sfe-file{order:1;margin-left:auto}
+  .sfe-hist{order:2;flex:1 1 120px;min-width:120px}
+  .sfe-aids{order:3}#st-file{order:4}
+  #tlabel{display:none}
+  .problems{max-height:38%}
+  .versions{grid-template-columns:1fr}.version{max-height:26dvh}
+}
+@media (prefers-reduced-motion:reduce){#flash.go{animation:none}#p-toggle .g,#ruler i,.tog input,.tog input::before{transition:none}}
+/* the list of what fits at the cursor; suggest.mjs places it at the cursor's column, under the line or above it */
+#pop{position:absolute;z-index:5;margin:0;padding:4px;list-style:none;width:min(360px,calc(100% - 8px));max-height:190px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-2)}
+#pop[hidden]{display:none}
+/* the fields of an inserted template, over the text: the one to fill now, the next ones dashed, and a count where Tab goes on */
+#flds{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.fld{position:absolute;height:var(--lh);border-radius:5px;outline:1.5px dashed color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:-1px}
+.fld.now{outline:1.5px solid var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+.fld.in{animation:sfeField .45s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes sfeField{from{transform:scale(1.25,1.6);opacity:0}}
+.fld-tip{position:absolute;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 var(--fs-11_5)/18px var(--sans);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.fld.in{animation:none}}
+#pop li{display:flex;gap:10px;align-items:baseline;min-height:26px;padding:3px 8px;border-radius:5px;cursor:pointer}
+#pop li b{font-weight:600;white-space:nowrap}#pop li span{font:var(--fs-12)/1.4 var(--sans);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pop li[aria-selected=true]{background:var(--accent-soft)}#pop li[aria-selected=true] b{color:var(--accent)}
+#pop li.pop-tip{cursor:default;min-height:0;margin-top:3px;padding:3px 8px 1px;border-top:1px solid var(--line);border-radius:0;font:var(--fs-11_5)/1.4 var(--sans);color:var(--muted)}
+@media (pointer:coarse){#pop li{min-height:36px;align-items:center}}
+/* the marks of spaces and tabs are backgrounds of the real characters: a dot, and an arrow at the start of the tab stop. A background takes
+   no part in the layout, so the text keeps its widths. The class names are the editor's own: the viewer has a .tb */
+.wsp,.wtab{--mark:color-mix(in srgb,var(--muted) 70%,transparent)}
+.wsp{background:radial-gradient(circle,var(--mark) 0 1px,transparent 1.5px)}
+.wtab{background:var(--mark);-webkit-mask:var(--arrow) left center/16px 20px no-repeat;mask:var(--arrow) left center/16px 20px no-repeat;
+  --arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 20'%3E%3Cpath d='M2.5 10h10M9 6.5l3.5 3.5L9 13.5' fill='none' stroke='%23000' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+/* the text has changes that are not in the file: a dot on Edit, which also shows in Read mode */
+html[data-dirty] .srcmode [data-mode=edit]::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--human)}
+/* a short editor (Split on a phone): the bar is one row that scrolls sideways and the text keeps fewer lines, so the text and the
+   Problems bar stay in the box; when even that does not fit, the box scrolls (#sf-park cuts what is outside it) */
+@container sfe (max-height:420px){.sfe-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.sfe-hist,.sfe-acts{flex:none}.sfe-acts{flex-wrap:nowrap}.ed{min-height:4lh}}
+/* the edit page's header has one more tab: the controls at the right keep their width, and the title gives way */
+@media (min-width:761px){.bar{grid-template-columns:minmax(0,1fr) auto auto}}

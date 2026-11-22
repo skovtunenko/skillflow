@@ -1,0 +1,9 @@
+skillflow 1.0
+
+context "Drafts release notes for a git tag." {
+	input tag "the git tag to describe"
+
+	output "a new section in CHANGELOG.md"
+}
+
+step draft by=llm "Write the notes for the tag."

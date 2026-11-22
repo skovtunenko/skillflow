@@ -1,0 +1,7 @@
+skillflow 1.0
+
+context {
+	invariant by=human "nothing is published without the user's approval"
+}
+
+gate approved "Did the user approve the draft?"

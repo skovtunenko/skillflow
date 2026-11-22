@@ -1,0 +1,493 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": "1.2",
+ "flowSkillflowVersion": "2026.11.20.1",
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 2,
+  "step": 7,
+  "decide": 2,
+  "end": 3,
+  "by": {
+   "code": 2,
+   "llm": 5,
+   "human": 2
+  },
+  "unclear": 1
+ },
+ "context": {
+  "purpose": "Drafts release notes for a git tag and adds them to CHANGELOG.md.",
+  "inputs": [
+   {
+    "name": "tag",
+    "text": "the git tag to describe",
+    "line": 4
+   },
+   {
+    "name": "changelog",
+    "text": "the project's existing CHANGELOG.md",
+    "line": 5
+   }
+  ],
+  "outputs": [
+   {
+    "name": "changelog",
+    "text": "a new section in CHANGELOG.md",
+    "line": 7
+   },
+   {
+    "name": "",
+    "text": "a one-line summary in the chat",
+    "line": 8
+   }
+  ],
+  "invariants": [
+   {
+    "text": "nothing is published without the user's approval",
+    "line": 10,
+    "by": "human",
+    "words": [],
+    "nodes": {}
+   },
+   {
+    "text": "collect.sh stops the flow when the tag does not exist",
+    "line": 11,
+    "by": "code",
+    "words": [
+     "tag"
+    ],
+    "nodes": {}
+   },
+   {
+    "text": "no commit is changed during the flow",
+    "line": 12,
+    "by": "llm",
+    "words": [],
+    "nodes": {}
+   }
+  ],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "phase",
+   "line": 15,
+   "name": "gather",
+   "prose": "Find what changed since the last tag.",
+   "unclear": [],
+   "children": [
+    {
+     "id": "n2",
+     "kind": "step",
+     "line": 16,
+     "name": "collect-changes",
+     "by": "code",
+     "question": "",
+     "prose": "",
+     "file": "scripts/collect.sh",
+     "skill": "",
+     "unclear": [],
+     "tools": [
+      "gh"
+     ],
+     "inputs": [],
+     "outputs": [
+      "changes"
+     ],
+     "onfail": {
+      "id": "n3",
+      "kind": "onfail",
+      "line": 20,
+      "prose": "",
+      "unclear": [],
+      "step": "n2",
+      "outputs": [],
+      "children": [
+       {
+        "id": "n4",
+        "kind": "end",
+        "line": 21,
+        "text": "report that the tag does not exist",
+        "unclear": []
+       }
+      ],
+      "ends": true
+     }
+    },
+    {
+     "id": "n5",
+     "kind": "decide",
+     "line": 25,
+     "name": "size",
+     "by": "llm",
+     "question": "Is this a major release?",
+     "prose": "",
+     "file": "",
+     "skill": "",
+     "unclear": [],
+     "tools": [],
+     "inputs": [],
+     "outputs": [
+      "size"
+     ],
+     "whens": [
+      {
+       "id": "n6",
+       "line": 28,
+       "outcome": "major",
+       "prose": "",
+       "unclear": [],
+       "outputs": [],
+       "children": [
+        {
+         "id": "n7",
+         "kind": "step",
+         "line": 29,
+         "name": "ask-highlights",
+         "by": "llm",
+         "question": "",
+         "prose": "Ask which changes come first.",
+         "file": "",
+         "skill": "",
+         "unclear": [],
+         "tools": [],
+         "inputs": [
+          "highlights"
+         ],
+         "outputs": [],
+         "onfail": null
+        }
+       ],
+       "ends": false
+      },
+      {
+       "id": "n8",
+       "line": 34,
+       "outcome": "regular",
+       "prose": "The notes have no highlights.",
+       "unclear": [],
+       "outputs": [],
+       "children": [],
+       "ends": false
+      }
+     ]
+    }
+   ],
+   "ends": false
+  },
+  {
+   "id": "n9",
+   "kind": "phase",
+   "line": 38,
+   "name": "write",
+   "prose": "",
+   "unclear": [],
+   "ref": "S2",
+   "children": [
+    {
+     "id": "n10",
+     "kind": "step",
+     "line": 39,
+     "name": "draft",
+     "by": "llm",
+     "question": "",
+     "prose": "Group the changes **by type**:\n- features\n- fixes\n\nLeave out internal refactors. Revise the draft until the user approves it or stops.",
+     "file": "",
+     "skill": "",
+     "unclear": [],
+     "tools": [
+      "editor",
+      "jira"
+     ],
+     "inputs": [],
+     "outputs": [
+      "draft"
+     ],
+     "onfail": null
+    },
+    {
+     "id": "n11",
+     "kind": "step",
+     "line": 50,
+     "name": "polish",
+     "by": "llm",
+     "question": "",
+     "prose": "Apply the style guide to the draft.",
+     "file": "",
+     "skill": "style-guide",
+     "unclear": [],
+     "tools": [],
+     "inputs": [],
+     "outputs": [],
+     "onfail": null
+    },
+    {
+     "id": "n12",
+     "kind": "gate",
+     "line": 53,
+     "name": "approved",
+     "by": "human",
+     "question": "Did the user approve the draft?",
+     "prose": "",
+     "file": "",
+     "skill": "",
+     "unclear": [
+      "The skill does not say how many revision rounds are allowed (SKILL.md:24)."
+     ],
+     "tools": [],
+     "inputs": [],
+     "outputs": [],
+     "whens": [
+      {
+       "id": "n13",
+       "line": 54,
+       "outcome": "rejected",
+       "prose": "",
+       "unclear": [],
+       "outputs": [],
+       "children": [
+        {
+         "id": "n14",
+         "kind": "end",
+         "line": 55,
+         "text": "the user stopped without approval",
+         "unclear": []
+        }
+       ],
+       "ends": true
+      }
+     ],
+     "implied": [
+      {
+       "outcome": "approved",
+       "prose": "the flow continues"
+      },
+      {
+       "outcome": "revise",
+       "prose": "the person asks for changes: the work before is redone and the gate asks again"
+      }
+     ]
+    },
+    {
+     "id": "n15",
+     "kind": "step",
+     "line": 60,
+     "name": "publish",
+     "by": "code",
+     "question": "",
+     "prose": "",
+     "file": "",
+     "skill": "",
+     "unclear": [],
+     "tools": [],
+     "inputs": [],
+     "outputs": [
+      "changelog"
+     ],
+     "onfail": {
+      "id": "n16",
+      "kind": "onfail",
+      "line": 63,
+      "prose": "",
+      "unclear": [],
+      "step": "n15",
+      "outputs": [],
+      "children": [
+       {
+        "id": "n17",
+        "kind": "step",
+        "line": 64,
+        "name": "report-error",
+        "by": "llm",
+        "question": "",
+        "prose": "Show the error and leave CHANGELOG.md unchanged.",
+        "file": "",
+        "skill": "",
+        "unclear": [],
+        "tools": [],
+        "inputs": [],
+        "outputs": [],
+        "onfail": null
+       },
+       {
+        "id": "n18",
+        "kind": "end",
+        "line": 65,
+        "text": "CHANGELOG.md stays unchanged",
+        "unclear": []
+       }
+      ],
+      "ends": true
+     }
+    },
+    {
+     "id": "n19",
+     "kind": "step",
+     "line": 71,
+     "name": "announce",
+     "by": "human",
+     "question": "",
+     "prose": "The user posts the \"What's new\" section to the team channel.",
+     "file": "",
+     "skill": "",
+     "unclear": [],
+     "tools": [],
+     "inputs": [],
+     "outputs": [],
+     "onfail": {
+      "id": "n20",
+      "kind": "onfail",
+      "line": 72,
+      "prose": "The notes stay in CHANGELOG.md only.",
+      "unclear": [],
+      "step": "n19",
+      "outputs": [],
+      "children": [],
+      "ends": false
+     }
+    }
+   ],
+   "ends": false
+  }
+ ],
+ "data": {
+  "tag": {
+   "input": "the git tag to describe",
+   "output": null,
+   "outputOf": [],
+   "inputOf": [],
+   "mentionOf": [
+    "n1",
+    "n4"
+   ],
+   "mentionAt": {
+    "n1": {
+     "before": "Find what changed since the last ",
+     "word": "tag",
+     "after": "."
+    },
+    "n4": {
+     "before": "report that the ",
+     "word": "tag",
+     "after": " does not exist"
+    }
+   }
+  },
+  "changelog": {
+   "input": "the project's existing CHANGELOG.md",
+   "output": "a new section in CHANGELOG.md",
+   "outputOf": [
+    "n15"
+   ],
+   "inputOf": [],
+   "mentionOf": [],
+   "mentionAt": {}
+  },
+  "changes": {
+   "input": null,
+   "output": null,
+   "outputOf": [
+    "n2"
+   ],
+   "inputOf": [],
+   "about": "the commits and pull requests since the last tag",
+   "mentionOf": [
+    "n7",
+    "n10"
+   ],
+   "mentionAt": {
+    "n7": {
+     "before": "Ask which ",
+     "word": "changes",
+     "after": " come first."
+    },
+    "n10": {
+     "before": "Group the ",
+     "word": "changes",
+     "after": " **by type**:"
+    }
+   }
+  },
+  "size": {
+   "input": null,
+   "output": null,
+   "outputOf": [
+    "n5"
+   ],
+   "inputOf": [],
+   "about": "major or regular",
+   "mentionOf": [],
+   "mentionAt": {}
+  },
+  "highlights": {
+   "input": null,
+   "output": null,
+   "outputOf": [],
+   "inputOf": [
+    "n7"
+   ],
+   "about": "the changes that the user wants at the top",
+   "mentionOf": [
+    "n5"
+   ],
+   "mentionAt": {
+    "n5": {
+     "before": "The notes have no ",
+     "word": "highlights",
+     "after": "."
+    }
+   }
+  },
+  "draft": {
+   "input": null,
+   "output": null,
+   "outputOf": [
+    "n10"
+   ],
+   "inputOf": [],
+   "about": "the release notes before approval",
+   "mentionOf": [
+    "n11",
+    "n12"
+   ],
+   "mentionAt": {
+    "n11": {
+     "before": "Apply the style guide to the ",
+     "word": "draft",
+     "after": "."
+    },
+    "n12": {
+     "before": "Did the user approve the ",
+     "word": "draft",
+     "after": "?"
+    }
+   }
+  }
+ },
+ "tools": {
+  "editor": [
+   "n10"
+  ],
+  "gh": [
+   "n2"
+  ],
+  "jira": [
+   "n10"
+  ]
+ },
+ "toolKinds": {
+  "editor": "agent",
+  "jira": "mcp"
+ },
+ "unclear": [
+  {
+   "text": "The skill does not say how many revision rounds are allowed (SKILL.md:24).",
+   "node": "n12"
+  }
+ ],
+ "sourceText": "skillflow 1.0 skill-version=\"1.2\" skillflow-version=\"2026.11.20.1\"\n\ncontext \"Drafts release notes for a git tag and adds them to CHANGELOG.md.\" {\n\tinput tag \"the git tag to describe\"\n\tinput changelog \"the project's existing CHANGELOG.md\"\n\n\toutput changelog \"a new section in CHANGELOG.md\"\n\toutput \"a one-line summary in the chat\"\n\n\tinvariant by=human \"nothing is published without the user's approval\"\n\tinvariant by=code \"collect.sh stops the flow when the tag does not exist\"\n\tinvariant by=llm \"no commit is changed during the flow\"\n}\n\nphase gather \"Find what changed since the last tag.\" {\n\tstep collect-changes by=code file=\"scripts/collect.sh\" {\n\t\ttools gh /* the GitHub CLI */\n\t\toutput changes \"the commits and pull requests since the last tag\"\n\n\t\ton-fail {\n\t\t\tend \"report that the tag does not exist\"\n\t\t}\n\t}\n\n\tdecide size \"Is this a major release?\" by=llm {\n\t\toutput size \"major or regular\"\n\n\t\twhen major {\n\t\t\tstep ask-highlights by=llm \"Ask which changes come first.\" {\n\t\t\t\tinput highlights \"the changes that the user wants at the top\"\n\t\t\t}\n\t\t}\n\n\t\twhen regular \"The notes have no highlights.\"\n\t}\n}\n\nphase write ref=\"S2\" {\n\tstep draft by=llm \"\"\"\n\t\tGroup the changes **by type**:\n\t\t- features\n\t\t- fixes\n\n\t\tLeave out internal refactors. Revise the draft until the user approves it or stops.\n\t\t\"\"\" {\n\t\ttools (agent)editor (mcp)jira\n\t\toutput draft \"the release notes before approval\"\n\t}\n\n\tstep polish by=llm skill=style-guide \"Apply the style guide to the draft.\"\n\n\t// ? The skill does not say how many revision rounds are allowed (SKILL.md:24).\n\tgate approved \"Did the user approve the draft?\" {\n\t\twhen rejected {\n\t\t\tend \"the user stopped without approval\"\n\t\t}\n\t}\n\n\t// From here on the flow writes files.\n\tstep publish by=code {\n\t\toutput changelog\n\n\t\ton-fail {\n\t\t\tstep report-error by=llm \"Show the error and leave CHANGELOG.md unchanged.\"\n\t\t\tend \"CHANGELOG.md stays unchanged\"\n\t\t}\n\t}\n\n\t/- step tweet by=llm \"Post the notes.\"\n\n\tstep announce by=human #\"The user posts the \"What's new\" section to the team channel.\"# {\n\t\ton-fail \"The notes stay in CHANGELOG.md only.\"\n\t}\n}\n",
+ "example": null
+}

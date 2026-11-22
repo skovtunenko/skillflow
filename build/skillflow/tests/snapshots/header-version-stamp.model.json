@@ -1,0 +1,47 @@
+{
+ "format": 1,
+ "title": "demo",
+ "skillVersion": "0.3",
+ "source": "flow.kdl",
+ "errors": [],
+ "stats": {
+  "phase": 0,
+  "step": 1,
+  "decide": 0,
+  "end": 0,
+  "by": {
+   "llm": 1
+  },
+  "unclear": 0
+ },
+ "context": {
+  "purpose": "",
+  "inputs": [],
+  "outputs": [],
+  "invariants": [],
+  "unclear": []
+ },
+ "flow": [
+  {
+   "id": "n1",
+   "kind": "step",
+   "line": 2,
+   "name": "x",
+   "by": "llm",
+   "question": "",
+   "prose": "",
+   "file": "",
+   "skill": "",
+   "unclear": [],
+   "tools": [],
+   "inputs": [],
+   "outputs": [],
+   "onfail": null
+  }
+ ],
+ "data": {},
+ "tools": {},
+ "unclear": [],
+ "sourceText": "skillflow 1.0 skill-version=\"0.3\"\nstep x by=llm\n",
+ "example": null
+}

@@ -1,0 +1,3 @@
+# Tasks live in .mise/tasks/. List them: mise tasks
+[tools]
+node = "22"

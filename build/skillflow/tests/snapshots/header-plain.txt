@@ -1,0 +1,5 @@
+OK <TMP>/flow.kdl
+  phases 0 · steps 1 · decisions 0 · ends 0 · executors: llm 1 · ❓ 0
+  tools: -
+  invariants: -
+  versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>

@@ -1,0 +1,6 @@
+OK <TMP>/flow.kdl · 1 warning
+  phases 2 · steps 7 · decisions 2 · ends 3 · executors: code 2, human 2, llm 5 · ❓ 1 · refs 0/1
+  tools: editor, gh, jira
+  invariants: code 1 · human 1 · llm 1 · unstated 0
+  versions: skill-version 1.2 · skillflow-version 2026.11.20.1 · installed SkillFlow <VERSION>
+  <TMP>/flow.kdl:38: warning: ref "S2" has no defining place in the skill (hint: write the label as the skill writes it at a heading, a first table cell, a list item, or a bold label; or remove the ref)

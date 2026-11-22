@@ -1,0 +1,6 @@
+skillflow 1.0
+
+phase gather "Find what changed since the last tag." {
+	step collect-changes by=code
+	step draft by=llm
+}
