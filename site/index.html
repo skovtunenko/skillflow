@@ -13,52 +13,105 @@ try { const t = localStorage.getItem("skillflow-theme"); if (t === "light" || t 
 <style>
 <!--viewer-css-->
 *{box-sizing:border-box}
-html{scroll-padding-top:64px;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-16)/1.55 var(--sans);-webkit-font-smoothing:antialiased}
-a{color:var(--accent)}
+:root{--gutter:clamp(16px,3.5vw,48px);--page:1440px;--measure:68ch;--top-h:60px}
+html{scroll-padding-top:calc(var(--top-h) + 20px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-16)/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-underline-offset:2px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 code,pre{font-family:var(--mono)}
-p code,li code,td code,th code,h3 code{font-size:.9em;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
-.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+:is(p,li,td,th,h3) code:not(pre *){font-size:.88em;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
+.wrap{width:min(100%,var(--page));margin:0 auto;padding:0 var(--gutter)}
+.g{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.g.fill{fill:currentColor;stroke:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+[hidden]{display:none!important}
 
-/* top bar */
-.top{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line)}
-.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:8px;padding-bottom:8px}
-.brand{display:flex;align-items:baseline;gap:8px;color:var(--ink);text-decoration:none;font-weight:700;font-size:var(--fs-17);letter-spacing:-.015em}
-.brand span{font:var(--fs-12)/1 var(--mono);color:var(--muted);letter-spacing:0}
-.top nav{display:flex;gap:6px}
-#theme{margin-left:auto;cursor:pointer}
-.btn[hidden]{display:none}
-.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface-2);color:var(--ink);font:500 var(--fs-13)/1 var(--sans);text-decoration:none}
-.btn:hover{border-color:var(--edge-2)}
-/* on a phone the bar takes two rows, so it scrolls away */
-@media (max-width:599px){.top{position:static}html{scroll-padding-top:0}}
+/* top bar: the trays of the flow page */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;min-height:var(--top-h)}
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:700;font-size:var(--fs-17);letter-spacing:-.02em;white-space:nowrap}
+.mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--accent-fill);color:var(--accent-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .18),0 1px 2px rgb(0 0 0 / .2)}
+.mark .g{stroke-width:1.7}
+.ver{font:500 var(--fs-11)/1 var(--mono);color:var(--muted);padding:4px 7px;border:1px solid var(--line);border-radius:999px;letter-spacing:0}
+.toc{display:none;gap:2px;margin-left:8px}
+.toc a{padding:7px 10px;border-radius:8px;color:var(--muted);font:500 var(--fs-13)/1 var(--sans);text-decoration:none}
+@media (hover:hover){.toc a:hover{color:var(--ink);background:var(--surface-2)}}
+.toc a[aria-current=true]{color:var(--accent);background:var(--accent-soft)}
+@media (min-width:1024px){.toc{display:flex}}
+@media (min-width:1024px) and (max-width:1279px){.ver{display:none}.toc a{padding:7px 7px}.pages .lbl-t{display:none}.pages .tb{width:30px;padding:0}}
+.acts{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tray{display:inline-flex;align-items:center;gap:2px;flex:none;padding:3px;border:1px solid var(--line);border-radius:11px;background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
+.tb{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;min-width:30px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 var(--fs-13)/1 var(--sans);text-decoration:none;cursor:pointer;white-space:nowrap}
+.tb.icon{width:30px;padding:0}
+@media (hover:hover){.tb:hover{background:color-mix(in srgb,var(--surface) 60%,transparent);color:var(--ink)}}
+/* pressed: the raised thumb of a segmented control, so the state does not rest on colour alone */
+.tb[aria-pressed=true],.tb[aria-pressed=true]:hover{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgb(0 0 0 / .14),0 0 0 1px var(--line-2)}
+.primary{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px 0 12px;border-radius:11px;background:var(--accent-fill);color:var(--accent-ink);font:600 var(--fs-13_5)/1 var(--sans);text-decoration:none;white-space:nowrap;box-shadow:inset 0 1px 0 rgb(255 255 255 / .18),0 1px 2px rgb(0 0 0 / .18),0 4px 14px color-mix(in srgb,var(--accent-fill) 35%,transparent)}
+.primary .go{transition:transform .15s}
+@media (hover:hover){.primary:hover{filter:brightness(1.08)}.primary:hover .go{transform:translateX(2px)}}
+@media (pointer:coarse){.tb{height:36px;min-width:36px}.tb.icon{width:36px}}
+/* a phone: two rows, and the bar scrolls away */
+@media (max-width:719px){.top{position:static}html{scroll-padding-top:0}.bar{flex-wrap:wrap;padding:10px 0;gap:10px}.acts{margin-left:0;width:100%;flex-wrap:wrap}.acts .primary{margin-left:auto}.pages .lbl-t{display:none}.pages .tb{width:30px;padding:0}}
 
 /* sections */
-section{padding:28px 0 8px}
-section+section{border-top:1px solid var(--line);margin-top:20px}
-h1{font-size:clamp(1.6rem,5vw,2.3rem);line-height:1.12;letter-spacing:-.025em;margin:0 0 12px;text-wrap:balance}
-h2{font-size:var(--fs-22);letter-spacing:-.015em;margin:0 0 12px}
-h3{font-size:var(--fs-15);margin:0}
-p{margin:0 0 12px;max-width:40em;color:var(--ink-2)}
-ul,ol{margin:0 0 12px;padding-left:1.3em;color:var(--ink-2);max-width:44em}
-li{margin:4px 0}
-.hint{font-size:var(--fs-14);color:var(--muted)}
+section{padding:clamp(56px,8vw,112px) 0 0}
+.sh{margin:0 0 28px}
+/* the section number comes from CSS: it is decoration, not prose */
+main{counter-reset:sec}
+.sh{counter-increment:sec}
+.num{display:flex;align-items:center;gap:10px;margin:0 0 12px;font:600 var(--fs-12_5)/1 var(--mono);letter-spacing:.08em;color:var(--accent)}
+.num::before{content:"";width:28px;border-top:1.5px solid currentColor}
+.num::after{content:counter(sec,decimal-leading-zero) " / 09"}
+h2{font-size:clamp(1.75rem,3vw,2.5rem);line-height:1.08;letter-spacing:-.035em;margin:0 0 14px;text-wrap:balance}
+h3{font-size:var(--fs-16);margin:0;letter-spacing:-.01em}
+p{margin:0 0 12px;max-width:var(--measure);color:var(--ink-2);text-wrap:pretty}
+.muted{color:var(--muted)}
+.lead>p:last-child{margin-bottom:0}
+.lead p{font-size:clamp(1.0625rem,1.35vw,1.25rem);line-height:1.5;letter-spacing:-.008em;color:var(--ink-2)}
+.lead strong{display:block;margin-bottom:4px;font-size:clamp(1.25rem,1.9vw,1.625rem);line-height:1.25;letter-spacing:-.022em;font-weight:650;color:var(--ink);text-wrap:balance}
+/* a wide screen: the title on the left, its prose on the right, both on one baseline, so no half of the width stays empty */
+@media (min-width:1024px){
+  .sh{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:clamp(40px,6vw,96px);align-items:start}
+  .sh>.num{grid-column:1/-1}
+  .sh>h2{grid-column:1;margin:0}
+  /* level with the title, however long the prose is */
+  .sh>.lead{grid-column:2;grid-row:2;padding:6px 0 0 24px;border-left:2px solid var(--accent-soft)}
+  .hh{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);column-gap:clamp(40px,5vw,80px);align-items:end}
+  .hh h1{max-width:none;margin-bottom:0}
+  .hh .lede{margin:0 0 6px}
+}
+
+
+/* hero */
+.hero{position:relative;isolation:isolate;padding-top:clamp(40px,7vw,96px)}
+.hero::before{content:"";position:absolute;inset:0 0 auto;height:640px;z-index:-1;background-image:radial-gradient(var(--dot) 1.1px,transparent 1.3px);background-size:18px 18px;-webkit-mask-image:linear-gradient(#000 20%,transparent 85%);mask-image:linear-gradient(#000 20%,transparent 85%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0;padding:6px 12px 6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font:500 var(--fs-12_5)/1 var(--mono);color:var(--ink-2);box-shadow:var(--shadow-1)}
+.eyebrow .dots{display:inline-flex;gap:3px}
+.eyebrow .dots i{width:7px;height:7px;border-radius:50%;background:var(--x)}
+h1{font-size:clamp(2.25rem,5.6vw,4.5rem);line-height:1;letter-spacing:-.045em;margin:22px 0 20px;max-width:17ch;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(1.0625rem,1.5vw,1.3125rem);line-height:1.5;max-width:52ch}
 
 /* code */
-pre.kdl{margin:0;padding:10px 12px;background:var(--surface);font-size:var(--fs-12_5);line-height:1.65;tab-size:4;-moz-tab-size:4;overflow-x:auto;color:var(--ink)}
+pre.kdl{margin:0;padding:14px 16px;background:var(--surface);font-size:var(--fs-12_5);line-height:1.7;tab-size:4;-moz-tab-size:4;overflow-x:auto;color:var(--ink)}
 pre.kdl .ln{border-radius:3px}
-.pane-h{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);font:var(--fs-12)/1.4 var(--mono);color:var(--muted)}
+pre.lines{counter-reset:l;padding-left:8px}
+pre.lines .ln::before{counter-increment:l;content:counter(l);display:inline-block;width:3ch;margin-right:2ch;text-align:right;color:var(--edge);-webkit-user-select:none;user-select:none}
+.pane-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);font:500 var(--fs-12)/1.4 var(--mono);color:var(--muted)}
+.pane-h .tag{padding:2px 7px;border-radius:999px;background:var(--line);color:var(--ink-2);font-size:var(--fs-11)}
+.pane-h .tag.intent{background:var(--accent-soft);color:var(--accent)}
 
 /* tables */
-.tw{overflow-x:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.tw{overflow-x:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1)}
 table{border-collapse:collapse;width:100%;font-size:var(--fs-14)}
-th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th,td{text-align:left;vertical-align:top;padding:12px 16px;border-bottom:1px solid var(--line)}
 tr:last-child>*{border-bottom:0}
-th{font-weight:650;color:var(--ink);background:var(--surface-2)}
+thead th{font:600 var(--fs-11_5)/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--surface-2)}
+tbody th{font-weight:600;color:var(--ink)}
 td{color:var(--ink-2)}
 td:first-child{white-space:nowrap}
-.tw.wide table{min-width:640px}
+.tw.wide table{min-width:680px}
+td>code:only-child{color:var(--accent);background:var(--accent-soft);border-color:transparent;font-weight:600}
 
 /* graph parts: the look of the viewer's cards */
 .cv{display:flex;flex-direction:column;align-items:center;gap:0;padding:16px 12px;background-color:var(--canvas);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:16px 16px}
@@ -77,16 +130,18 @@ button.n{cursor:pointer}
 .ep.fail{border-color:var(--fail);background:var(--fail-soft);color:var(--fail)}
 .fl{display:flex;align-items:center;gap:6px;width:100%;max-width:260px;justify-content:flex-end;font:700 var(--fs-10_5)/1 var(--mono);color:var(--fail)}
 .fl::before{content:"";width:22px;border-top:1.5px dashed var(--fail)}
+.n .ft{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;margin-top:3px;padding-top:6px;border-top:1px dashed color-mix(in srgb,var(--fail) 45%,transparent);font:700 var(--fs-10_5)/1 var(--mono);color:var(--fail)}
+.ctx .inv{border-radius:12px}
 .inv{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:4px 11px 4px 9px;font-size:var(--fs-12);color:var(--ink-2)}
 .inv::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--x,var(--edge-2));box-shadow:0 0 0 2.5px var(--xs,var(--line))}
 .ctx{width:100%;max-width:290px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:7px 10px;display:grid;gap:5px;box-shadow:var(--shadow-1)}
 .ctx b{font:600 var(--fs-12)/1.2 var(--mono)}
-.chip{display:inline-block;margin:0 4px 0 0;padding:2px 6px;border-radius:4px;font:600 var(--fs-11)/1.3 var(--mono);background:color-mix(in srgb,var(--input) 14%,var(--surface));color:var(--input)}
-.chip.out{background:color-mix(in srgb,var(--output) 14%,var(--surface));color:var(--output)}
+.chip{display:inline-block;margin:0 4px 0 0;padding:2px 6px;border-radius:4px;font:600 var(--fs-11)/1.3 var(--mono);background:color-mix(in srgb,var(--input) 14%,var(--surface));color:color-mix(in srgb,var(--input) 78%,var(--ink))}
+.chip.out{background:color-mix(in srgb,var(--output) 14%,var(--surface));color:color-mix(in srgb,var(--output) 78%,var(--ink))}
 .pb{width:100%;max-width:310px;border:1px solid var(--line-2);border-radius:12px;background:color-mix(in srgb,var(--phase-ink) var(--phase-a),var(--surface));overflow:hidden}
 .pb>.a{display:flex;gap:7px;align-items:baseline;width:100%;margin:0;padding:6px 11px;border:0;border-bottom:1px solid var(--line-2);background:var(--phase-head);color:var(--ink);font:650 var(--fs-12)/1.2 var(--mono);text-align:left}
 button.a{cursor:pointer}
-.pb>.a span{font:700 var(--fs-9_5)/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pb>.a span{font:700 var(--fs-9_5)/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .z{display:flex;flex-direction:column;align-items:center;padding:12px 10px}
 .fork{position:relative;display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));width:100%}
 /* the bars join the centers of the first and the last branch */
@@ -97,111 +152,413 @@ button.a{cursor:pointer}
 .lbl{font:600 var(--fs-11)/1.6 var(--mono);color:var(--muted)}
 
 /* section 1: the assembled flow */
-.ex{margin:16px 0 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
-.legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:var(--fs-13);color:var(--muted)}
-.who{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--x);font:650 var(--fs-12_5)/1 var(--mono);cursor:pointer}
-.who::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--x)}
-.who[aria-pressed=true]{background:var(--xs);border-color:var(--x)}
+.ex{margin:40px 0 0;border:1px solid var(--line-2);border-radius:16px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-2)}
+.exbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 10px 8px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.file{display:inline-flex;align-items:center;gap:8px;font:500 var(--fs-12_5)/1 var(--mono);color:var(--ink)}
+.file .g{color:var(--muted)}
+.exbar .hint{margin:0 0 0 auto;font-size:var(--fs-12_5);color:var(--muted)}
+.who-l{font:500 var(--fs-12)/1 var(--sans);color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--x)}
+.tb .ct{font:500 var(--fs-11)/1 var(--mono);color:var(--muted)}
+.tb[aria-pressed=true] .ct{color:inherit}
 .split{display:grid;grid-template-columns:minmax(0,1fr)}
 .split>div{min-width:0}
-@media (min-width:860px){.split{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}.split>div:first-child{border-right:1px solid var(--line)}}
-/* on a phone the graph comes first: the code is long and scrolls */
-@media (max-width:859px){.split>div:first-child{order:1;border-top:1px solid var(--line)}}
-.ex .cv{min-height:100%}
+@media (min-width:900px){.split{grid-template-columns:minmax(0,1fr) 380px}.split>.src{border-right:1px solid var(--line)}}
+@media (min-width:1180px){.split{grid-template-columns:minmax(0,1fr) minmax(340px,420px)}}
+/* a phone: the graph comes first, and the code takes the whole width below it */
+@media (max-width:899px){.split>.src{order:1;border-top:1px solid var(--line)}}
+.ex .ln[data-node]{cursor:pointer}
+@media (hover:hover){.ex .ln[data-node]:hover{background:var(--surface-2)}}
+.ex .cv{min-height:100%;padding:28px 16px}
+.ex .pb{max-width:360px}.ex .ctx{max-width:330px}
 .ex .n,.ex .a,.ex .ln,.ex .inv,.ex .fl{transition:opacity .15s}
 .ex.hl :is(.ln,[data-node],.inv):not(.on),.ex.hl .fl{opacity:.32}
 .ex.hl .ln.on{background:var(--accent-soft)}
 .ex.hl :is(.n,.a,.inv).on{outline:2px solid var(--accent);outline-offset:1px}
-@media (prefers-reduced-motion:reduce){.ex .n,.ex .a,.ex .ln,.ex .inv{transition:none}}
+@media (prefers-reduced-motion:reduce){.ex .n,.ex .a,.ex .ln,.ex .inv,.primary .go,.lc summary .g{transition:none}}
 
 /* section 2: prose and flow side by side */
-.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 0 16px}
-@media (min-width:760px){.pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
-.pair>div{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);min-width:0}
-pre.prose{margin:0;padding:10px 12px;font-size:var(--fs-12_5);line-height:1.65;white-space:pre-wrap;color:var(--ink-2)}
+.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch;margin:0 0 16px}
+@media (min-width:900px){.pair{grid-template-columns:minmax(0,.8fr) auto minmax(0,1.2fr)}}
+.pair pre.kdl{white-space:pre-wrap}
+.pair>div{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);min-width:0;box-shadow:var(--shadow-1)}
+.pair>.to{display:grid;place-items:center;border:0;background:none;box-shadow:none;color:var(--accent)}
+.pair>.to span{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--accent-soft)}
+@media (max-width:899px){.pair>.to span{transform:rotate(90deg)}}
+pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;white-space:pre-wrap;color:var(--ink-2)}
+
+/* section 3: one list, one row per principle - number, sentence, example on one line */
+.pr{margin:0;padding:0;list-style:none;counter-reset:p;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1);overflow:hidden}
+.pr li{counter-increment:p;display:grid;grid-template-columns:52px minmax(0,1fr);gap:6px 24px;align-items:center;padding:18px 22px}
+.pr li+li{border-top:1px solid var(--line)}
+.pr li::before{content:counter(p,decimal-leading-zero);grid-row:span 2;align-self:start;font:600 var(--fs-22)/1 var(--mono);letter-spacing:-.02em;color:var(--accent)}
+.pr p{margin:0;color:var(--ink);font-size:var(--fs-16);line-height:1.45}
+@media (min-width:900px){.pr li{grid-template-columns:52px minmax(0,1fr) minmax(0,1fr)}.pr li::before{grid-row:auto}}
+@media (hover:hover){.pr li:hover{background:var(--surface-2)}}
+.px{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;font:500 var(--fs-12_5)/1.4 var(--mono);color:var(--muted)}
+.px code{padding:3px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink)}
+.px code.spec{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:var(--accent-soft);color:var(--accent)}
+.px code small{margin-left:8px;font-size:var(--fs-11_5);color:var(--muted)}
+.px .ar{color:var(--accent);font-size:var(--fs-16)}
+.px .by{border-color:transparent;background:var(--xs);color:var(--x)}
+.px pre.kdl{margin:0;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);white-space:pre-wrap;font-size:var(--fs-12_5);line-height:1.5}
 
 /* section 4: one tile per construct */
 .tiles{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 @media (min-width:720px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.tile{display:grid;grid-template-columns:minmax(0,1fr) 150px;grid-template-rows:auto 1fr;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;min-width:0}
-.tile>div{padding:10px 12px}
-.tile p{margin:4px 0 0;font-size:var(--fs-14)}
-.tile .cv{grid-row:1;grid-column:2;justify-content:center;margin:0;padding:10px 8px;border-left:1px solid var(--line)}
-.tile .cv .n,.tile .cv .pb{max-width:140px}
-.tile pre.kdl{grid-column:1/-1;border-top:1px solid var(--line);font-size:var(--fs-12)}
+.tile{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;min-width:0;box-shadow:var(--shadow-1)}
+.tile>div{padding:14px 16px}
+.tile p{margin:6px 0 0;font-size:var(--fs-14)}
+.tile .cv{justify-content:center;margin:0;padding:14px 10px;border-top:1px solid var(--line)}
+.tile .cv .n,.tile .cv .pb{max-width:240px}
+.tile .n b{white-space:nowrap}
+.tile .ep{border-radius:10px}
+.tile pre.kdl{grid-column:1/-1;border-top:1px solid var(--line);background:var(--surface-2);font-size:var(--fs-12)}
+@media (max-width:719px){.tile pre.kdl{white-space:pre-wrap}}
 .tile .z{padding:8px 6px}
-@media (max-width:380px){.tile{grid-template-columns:minmax(0,1fr) 128px}.tile .cv .n,.tile .cv .pb{max-width:118px}}
+@media (min-width:1180px){.tile{grid-template-columns:minmax(0,1fr) 260px}.tile .cv{grid-row:1;grid-column:2;border-top:0;border-left:1px solid var(--line)}.tile{grid-template-rows:auto 1fr}}
+.execs :is(th,td){width:33.33%;white-space:normal}
+.execs :is(th,td)+:is(th,td){border-left:1px solid var(--line)}
+.execs thead th{text-transform:none;letter-spacing:0;background:var(--xs)}
+.execs th code{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:none;color:var(--x);font:650 var(--fs-14)/1.2 var(--mono)}
+.execs th code::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--x)}
 
-/* section 8 */
-.links{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
-details{margin:0 0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-summary{cursor:pointer;padding:8px 12px;font-size:var(--fs-14);color:var(--ink)}
-details pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);font-size:var(--fs-12);line-height:1.5;white-space:pre-wrap;color:var(--ink-2)}
-footer{padding:24px 0 40px}
+/* section 5: the two tables side by side on a wide screen */
+.modes{display:grid;grid-template-columns:minmax(0,1fr);gap:0 16px;align-items:start}
+@media (min-width:1280px){.modes{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}}
+
+/* section 6: the chosen column */
+.kdlt tbody td:nth-child(2),.kdlt thead th:nth-child(2){background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+.kdlt thead th:nth-child(2){color:var(--accent)}
+.kdlt tbody th{width:180px}
+
+/* section 7: one card per part */
+.lic{display:grid;align-items:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px;margin:0}
+.lc{display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1)}
+.lc-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.lc-h h3{font-size:var(--fs-17)}
+.lc-h .v{font:500 var(--fs-11_5)/1 var(--mono);padding:4px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.lc-h .spdx{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--code-soft);color:var(--code);font:600 var(--fs-12)/1 var(--sans)}
+.lc .cr{margin:0;font-size:var(--fs-14);color:var(--ink-2)}
+.lc details{border-top:1px solid var(--line);padding-top:10px}
+.lc summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-13_5)/1.4 var(--sans);color:var(--accent);list-style:none}
+.lc summary::-webkit-details-marker{display:none}
+.lc summary .g{transition:transform .15s}
+.lc details[open] summary .g{transform:rotate(90deg)}
+.lc pre{margin:10px 0 0;padding:12px 14px;max-height:280px;overflow:auto;border-radius:10px;background:var(--surface-2);font-size:var(--fs-12);line-height:1.55;white-space:pre-wrap;color:var(--ink-2)}
+
+.cmd{display:flex;align-items:flex-start;gap:4px;margin-top:auto;padding:6px;border-radius:10px;background:color-mix(in srgb,var(--ink) 92%,var(--bg))}
+.cmd pre{flex:1;min-width:0;margin:0;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-12_5);line-height:1.6;color:var(--bg)}
+.cmd .tb{flex:none;height:28px;background:color-mix(in srgb,var(--bg) 14%,transparent);color:var(--bg);font-size:var(--fs-12)}
+@media (hover:hover){.cmd .tb:hover{background:color-mix(in srgb,var(--bg) 26%,transparent);color:var(--bg);box-shadow:none}}
+
+/* hero: the right column holds the next step, so it is not empty space */
+.hside{display:grid;gap:14px;align-content:end}
+.hside .lede{margin:0}
+.hside .cmd{margin:0}
+.ctas{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ghost{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);color:var(--ink);font:600 var(--fs-13_5)/1 var(--sans);text-decoration:none;white-space:nowrap;box-shadow:var(--shadow-1)}
+@media (hover:hover){.ghost:hover{border-color:var(--edge-2)}.ghost:hover .go{transform:translateX(2px)}}
+.ghost .go{transition:transform .15s}
+@media (min-width:1024px){.hh{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
+
+
+/* install: one wide terminal with tabs, then the first commands beside it */
+.inst{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:1024px){.inst{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
+.inst-main{min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-1)}
+.inst-main .tray{justify-self:start}
+.tb[aria-selected=true],.tb[aria-selected=true]:hover{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgb(0 0 0 / .14),0 0 0 1px var(--line-2)}
+.tp{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.tp p{margin:0;font-size:var(--fs-14)}
+.inst .cmd{margin:0;padding:10px 10px 10px 14px;align-items:center;border-radius:12px}
+.inst .cmd pre{white-space:pre;overflow-x:auto;overflow-wrap:normal;font-size:var(--fs-14);line-height:1.7}
+.inst .cmd pre::before{content:"$ ";color:color-mix(in srgb,var(--bg) 55%,transparent)}
+.then{display:grid;gap:10px;margin:0;padding:0;list-style:none;counter-reset:t}
+.then li{counter-increment:t;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px 12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.then li::before{content:counter(t);grid-row:span 2;align-self:start;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:600 var(--fs-13)/1 var(--mono)}
+.then h3{font-size:var(--fs-14)}
+.then .ghost{margin:0;justify-self:start}
+.then .cmd{margin:0;min-width:0}
+.then li>*{min-width:0}
+
+/* why: what a skill ships, and what joins it at run time; each part names the executor that runs it */
+.eq{display:grid;gap:clamp(18px,2.5vw,28px);margin:0 0 16px;padding:clamp(20px,3.5vw,44px);border:1px solid var(--line);border-radius:18px;background:radial-gradient(110% 130% at 0 0,var(--accent-soft),transparent 55%),var(--surface);box-shadow:var(--shadow-1)}
+.eq-f{display:flex;align-items:flex-start;gap:clamp(10px,1.6vw,20px)}
+.eq-l,.eq .op{flex:none;font-size:clamp(1.5rem,2.7vw,2.6rem);font-weight:750;letter-spacing:-.045em;line-height:1.05;color:var(--ink)}
+.eq .op{font-weight:300;color:var(--muted)}
+/* a group: its parts, and a bracket under them that says where they come from */
+.eq-g{position:relative;display:flex;align-items:stretch;gap:clamp(10px,1.6vw,20px);min-width:0;padding-bottom:42px}
+.eq-g.ship{flex:3 1 0}.eq-g.run{flex:2 1 0}
+.eq-b{position:absolute;left:0;right:0;bottom:0;display:grid;justify-items:center;gap:6px;font:600 var(--fs-11_5)/1 var(--mono);letter-spacing:.03em;color:var(--muted)}
+.eq-b::before{content:"";justify-self:stretch;height:12px;border:1.5px solid var(--edge-2);border-top:0;border-radius:0 0 10px 10px}
+.run .eq-b::before{border-style:dashed}
+.eq-t{flex:1 1 0;display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 6px 10px;border-radius:12px;transition:background .15s,box-shadow .15s}
+.eq-t>.w{white-space:nowrap;font-size:clamp(1.5rem,2.7vw,2.6rem);font-weight:750;letter-spacing:-.045em;line-height:1.05;color:var(--x)}
+.eq-t>.era{font:600 var(--fs-11_5)/1.3 var(--mono);letter-spacing:.03em;color:var(--muted)}
+.eq-t>.pth{align-self:flex-start;white-space:nowrap;padding:3px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font:500 var(--fs-12)/1.4 var(--mono);color:var(--ink-2);}
+.eq-t>.by{padding-top:8px;font-size:var(--fs-13);line-height:1.4;color:var(--ink-2)}
+.eq-t>.by code{display:inline-block;margin:0 0 4px;padding:3px 8px;border-radius:7px;background:var(--xs);color:var(--x);font:650 var(--fs-13)/1.2 var(--mono)}
+.eq-t.data{--x:var(--input);--xs:color-mix(in srgb,var(--input) 14%,var(--surface))}
+.eq-t.model{--x:var(--llm);--xs:var(--llm-soft)}
+/* a pointer on a part lights the parts that work together: the prompt and the model that runs it */
+@media (hover:hover){.eq:has([data-k=llm]:hover) [data-k=llm],.eq:has([data-k=code]:hover) [data-k=code],.eq:has([data-k=data]:hover) [data-k=data],.eq:has([data-k=human]:hover) [data-k=human]{background:var(--xs);box-shadow:0 0 0 1.5px var(--x)}}
+.eq figcaption{font-size:var(--fs-13);color:var(--muted);max-width:var(--measure)}
+@media (prefers-reduced-motion:reduce){.eq-t{transition:none}}
+/* a narrow screen: one part under the other, and the operators small */
+/* a narrow screen: "skill =" on one line, then one row per part (its word beside its facts), each group behind its rule */
+@media (max-width:899px){
+  .eq-f{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:10px 10px}
+  .eq-g{grid-column:1/-1;display:grid;gap:12px;padding:0 0 0 14px;border-left:1.5px solid var(--edge-2)}
+  .eq-g.run{border-left-style:dashed}
+  .eq-g .op,.eq-g+.op{display:none}
+  .eq-b{position:static;justify-items:start;order:-1}.eq-b::before{display:none}
+  .eq-t{display:grid;grid-template-columns:minmax(6.5rem,auto) minmax(0,1fr);align-items:baseline;gap:2px 12px;padding:0}
+  .eq-t>.w{grid-row:1/span 3;font-size:var(--fs-22)}
+  /* the plus moves into the word, so a part reads as a term of the sum */
+  .eq-g>.eq-t~.eq-t>.w::before,.run>.eq-t:first-of-type>.w::before{content:"+ ";font-weight:300;color:var(--muted)}
+  .eq-t>.era,.eq-t>.pth{grid-column:2}
+  .eq-t>.pth{justify-self:start;font-size:var(--fs-11_5);padding:1px 6px}
+  .eq-t>.by{grid-column:2;padding-top:2px;font-size:var(--fs-12_5)}
+  .eq-t>.by br{display:none}
+  .eq-t>.by code{margin:0 6px 0 0;padding:1px 6px;font-size:var(--fs-12)}
+}
+
+/* why KDL: four reasons */
+.why4{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;margin:0 0 16px;padding:0;list-style:none;counter-reset:w}
+.why4 li{counter-increment:w;display:grid;gap:6px;align-content:start;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1)}
+.why4 li::before{content:counter(w,decimal-leading-zero);font:600 var(--fs-13)/1 var(--mono);color:var(--accent)}
+.why4 p{margin:0;font-size:var(--fs-14)}
+
+/* the playground in the page */
+.pg{border:1px solid var(--line-2);border-radius:16px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-2)}
+/* the bar over the playground: the file, the sections of Help, and the way out to a tab of its own */
+.pgbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px 16px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.pgbar .file{min-width:0;overflow:hidden;white-space:nowrap}
+@media (max-width:899px){.pgbar{grid-template-columns:minmax(0,1fr) auto}.chap{grid-column:1/-1;grid-row:2}}
+.chap{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none;justify-self:center}
+.chap::-webkit-scrollbar{display:none}
+@media (max-width:899px){.chap{justify-self:stretch}}
+.chl{display:inline-flex;align-items:center;gap:6px;flex:none;margin-right:4px;font:600 var(--fs-11_5)/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ch{display:inline-flex;align-items:center;gap:7px;flex:none;height:32px;padding:0 12px 0 5px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:500 var(--fs-13)/1 var(--sans);text-decoration:none;box-shadow:var(--shadow-1);transition:border-color .15s,background .15s}
+.cn{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:650 var(--fs-11)/1 var(--mono)}
+@media (hover:hover){.ch:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}}
+.ch[aria-current=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.ch[aria-current=true] .cn{background:var(--accent-fill);color:var(--accent-ink)}
+.newtab{height:36px}
+@media (prefers-reduced-motion:reduce){.ch{transition:none}}
+.pg .ghost{height:32px;font-size:var(--fs-13)}
+.pg iframe{display:block;width:100%;height:min(86vh,920px);min-height:560px;border:0;background:var(--bg)}
+
+/* tutorial: a rail of steps, and the flow of the step in view; added lines and changed cards are marked */
+.tut{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin:0}
+@media (min-width:1024px){.tut{grid-template-columns:260px minmax(0,1fr);align-items:start}}
+.rail{position:relative;display:flex;gap:4px;overflow-x:auto;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1);scrollbar-width:thin}
+@media (min-width:1024px){.rail{flex-direction:column;position:sticky;top:calc(var(--top-h) + 16px);overflow:visible}}
+.st{display:flex;align-items:center;gap:10px;flex:none;min-height:40px;padding:6px 12px 6px 6px;border:0;border-radius:10px;background:none;color:var(--ink-2);font:500 var(--fs-13_5)/1.25 var(--sans);text-align:left;cursor:pointer}
+@media (hover:hover){.st:hover{background:var(--surface-2);color:var(--ink)}}
+.sn{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--surface);font:600 var(--fs-12)/1 var(--mono);color:var(--muted);transition:background .2s,color .2s,border-color .2s}
+.st.done .sn{border-color:transparent;background:var(--accent-soft);color:var(--accent)}
+.st[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
+.st[aria-selected=true] .sn{border-color:transparent;background:var(--accent-fill);color:var(--accent-ink)}
+/* a phone: the rail is a row of numbers; the title of the step is in its note */
+@media (max-width:1023px){.stt{display:none}.st{padding:6px}}
+.tpanels{display:grid;gap:24px;min-width:0}
+.tpn{display:grid;gap:12px;min-width:0}
+.tnote{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.tct{font:600 var(--fs-12)/1 var(--mono);letter-spacing:.06em;color:var(--accent)}
+.tnote h3{font-size:clamp(1.2rem,2vw,1.5rem);letter-spacing:-.025em}
+.tnote p{margin:0;font-size:var(--fs-15)}
+.ex.tex{margin:0}
+.tex .cv{padding:22px 14px}
+.tex .delta{display:inline-flex;gap:4px}
+.tag.add,.tag.del{padding:2px 7px;border-radius:999px;font:600 var(--fs-11)/1.3 var(--mono)}
+.tag.add{background:var(--code-soft);color:var(--code)}
+.tag.del{background:var(--fail-soft);color:var(--fail)}
+.legend{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font:500 var(--fs-12)/1 var(--sans);color:var(--muted)}
+.legend i{width:14px;height:10px;border-radius:3px;border:2px solid var(--accent)}
+.legend i.chg{border-style:dashed;margin-left:6px}
+.tex .ln.add{border-radius:0;background:color-mix(in srgb,var(--code-soft) 80%,transparent);box-shadow:inset 3px 0 0 var(--code)}
+.tex .ln.add::before{color:var(--code);font-weight:700}
+.tex :is(.n,.a,.ctx,.chip,.inv,.ep).new{outline:2px solid var(--accent);outline-offset:2px}
+.tex :is(.n,.a,.ctx,.chip,.inv,.ep).chg{outline:2px dashed var(--accent);outline-offset:2px}
+.tut.live .tpn:not([hidden]) :is(.new,.chg,.ln.add){animation:pop .45s cubic-bezier(.2,.8,.2,1.2) both}
+@keyframes pop{from{opacity:0;transform:translateY(4px) scale(.97)}}
+@media (prefers-reduced-motion:reduce){.tut.live .tpn:not([hidden]) :is(.new,.chg,.ln.add){animation:none}.sn{transition:none}}
+/* the controls sit above the step, so they stay in place while the steps change height */
+@media (min-width:1024px){.rail{grid-row:1/span 2}.tnav{grid-column:2;grid-row:1}.tpanels{grid-column:2;grid-row:2}}
+.tnav{display:flex;align-items:center;gap:10px}
+.tbar{flex:1;height:6px;margin-right:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.tbar i{display:block;height:100%;width:var(--p,0%);border-radius:inherit;background:var(--accent-fill);transition:width .3s}
+@media (prefers-reduced-motion:reduce){.tbar i{transition:none}}
+.tnav button{cursor:pointer;border:0}
+.tnav .ghost{border:1px solid var(--line-2)}
+.tnav button:disabled{opacity:.45;cursor:default;filter:none}
+.tdone{display:grid;gap:12px;padding:18px 20px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:14px;background:var(--accent-soft)}
+.tdone p{margin:0;color:var(--ink)}
+
+/* the GitHub mark reads at 18px */
+.pages .g{width:18px;height:18px}
+
+footer{margin-top:clamp(64px,9vw,120px);border-top:1px solid var(--line)}
+footer .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding-top:24px;padding-bottom:40px;font-size:var(--fs-13);color:var(--muted)}
+footer a{margin-left:auto;color:var(--muted)}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap">
-<a class="brand" href="#what">SkillFlow <span><!--version--></span></a>
-<button type="button" class="btn" id="theme" hidden><span aria-hidden="true">◐</span><span>Auto</span></button>
-<nav aria-label="Pages"><a class="btn" href="play/">Playground</a><a class="btn" href="flow/">Flow</a><a class="btn" href="https://github.com/skovtunenko/skillflow" rel="noreferrer">GitHub</a></nav>
+<header class="top"><div class="wrap bar">
+<a class="brand" href="#what"><span class="mark"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h4v3H3zM9 10.5h4v3H9zM5 5.5V8h6v2.5"/></svg></span>SkillFlow <span class="ver"><!--version--></span></a>
+<nav class="toc" aria-label="Sections"><a href="#start">Install</a><a href="#tutorial">Tutorial</a><a href="#playground">Playground</a><a href="#why">Why</a><a href="#principles">Principles</a><a href="#language">Language</a><a href="#modes">Modes</a><a href="#kdl">KDL</a><a href="#licenses">Licenses</a></nav>
+<div class="acts">
+<div class="tray theme" role="group" aria-label="Theme" hidden>
+<button type="button" class="tb icon" data-theme-set="auto" aria-pressed="false" aria-label="System theme" title="System theme"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM8 1.5v13M8 4.5 11 3M8 8l5-1.5M8 11.5l4 .5"/></svg></button>
+<button type="button" class="tb icon" data-theme-set="light" aria-pressed="false" aria-label="Light theme" title="Light theme"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6zM8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/></svg></button>
+<button type="button" class="tb icon" data-theme-set="dark" aria-pressed="false" aria-label="Dark theme" title="Dark theme"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg></button>
+</div>
+<nav class="tray pages" aria-label="Pages">
+<a class="tb" href="https://github.com/skovtunenko/skillflow" rel="noreferrer"><svg class="g fill" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span class="lbl-t">GitHub</span><span class="sr"> repository</span></a>
+</nav>
+<a class="primary" href="#playground">Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+</div>
 </div></header>
 
-<main class="wrap">
+<main>
 
-<section id="what" aria-labelledby="what-h">
-<h1 id="what-h">What SkillFlow is</h1>
-<p>SkillFlow is an intent-driven DSL: a declarative language for the intent of an agent skill. It is made for skills, not for general workflows. The flow file is the specification; the skill implements it.</p>
-<p class="hint">Select a node or a line to see its pair, or an executor to see its steps.</p>
+<section id="what" class="hero" aria-labelledby="what-h"><div class="wrap">
+<div class="hh"><div><p class="eyebrow"><span class="dots" aria-hidden="true"><i class="llm"></i><i class="code"></i><i class="human"></i></span>Intent-driven DSL · KDL 2.0</p>
+<h1 id="what-h">A declarative language for the <em>intent</em> of an agent skill.</h1></div>
+<div class="hside"><p class="lede">SkillFlow is made for skills, not for general workflows. The flow file is the specification; the skill implements it.</p>
+<div class="cmd"><pre><code>npx skills add skovtunenko/skillflow</code></pre><button type="button" class="tb copy">Copy</button></div>
+<div class="ctas"><a class="primary" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a><a class="ghost" href="#start">Other ways to install</a></div></div></div>
 <figure class="ex" id="assembled" data-pair aria-label="A flow file and its graph">
-<div class="legend" role="group" aria-label="Show the steps of one executor">
-<button type="button" class="who llm" data-by="llm" aria-pressed="false">by=llm</button>
-<button type="button" class="who code" data-by="code" aria-pressed="false">by=code</button>
-<button type="button" class="who human" data-by="human" aria-pressed="false">by=human</button>
+<div class="exbar">
+<span class="file"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>release-notes.kdl</span>
+<div class="tray" role="group" aria-label="Show the steps of one executor">
+<button type="button" class="tb llm" data-by="llm" aria-pressed="false"><span class="dot" aria-hidden="true"></span>LLM <span class="ct"></span></button>
+<button type="button" class="tb code" data-by="code" aria-pressed="false"><span class="dot" aria-hidden="true"></span>code <span class="ct"></span></button>
+<button type="button" class="tb human" data-by="human" aria-pressed="false"><span class="dot" aria-hidden="true"></span>human <span class="ct"></span></button>
+</div>
+<p class="hint">Select a node or a line to see its pair.</p>
 </div>
 <div class="split">
-<div><div class="pane-h">release-notes.kdl</div><pre class="kdl" tabindex="0" aria-label="Flow file release-notes.kdl"><code><!--flow-pair:release-notes--></code></pre></div>
+<div class="src"><pre class="kdl lines" tabindex="0" aria-label="Flow file release-notes.kdl"><code><!--flow-pair:release-notes--></code></pre></div>
 <div class="cv"><!--graph-pair:release-notes--></div>
 </div>
 </figure>
-</section>
+</div></section>
 
-<section id="why" aria-labelledby="why-h">
+<section id="start" aria-labelledby="start-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="start-h">Install</h2>
+<div class="lead"><p><strong>Needs Node.js 22 or later.</strong>No packages, no network access.</p></div></div>
+<div class="inst">
+<div class="inst-main">
+<div class="tray" role="tablist" aria-label="Ways to install">
+<button type="button" class="tb" role="tab" id="t-cli" aria-controls="p-cli" aria-selected="true">skills CLI</button>
+<button type="button" class="tb" role="tab" id="t-kst" aria-controls="p-kst" aria-selected="false" tabindex="-1">kasetto</button>
+<button type="button" class="tb" role="tab" id="t-hand" aria-controls="p-hand" aria-selected="false" tabindex="-1">By hand</button>
+</div>
+<div class="tp" role="tabpanel" id="p-cli" aria-labelledby="t-cli"><div class="cmd"><pre><code>npx skills add skovtunenko/skillflow</code></pre><button type="button" class="tb copy">Copy</button></div><p>For Claude Code, Codex, Cursor, and other agents, through <a href="https://skills.sh/" rel="noreferrer">skills.sh</a>.</p></div>
+<div class="tp" role="tabpanel" id="p-kst" aria-labelledby="t-kst"><div class="cmd"><pre><code>kst add https://github.com/skovtunenko/skillflow --skill skillflow</code></pre><button type="button" class="tb copy">Copy</button></div><p>Through <a href="https://www.kasetto.dev/" rel="noreferrer">kasetto</a>.</p></div>
+<div class="tp" role="tabpanel" id="p-hand" aria-labelledby="t-hand"><div class="cmd"><pre><code>git clone https://github.com/skovtunenko/skillflow
+cp -R skillflow/skills/skillflow &lt;skills-folder&gt;/</code></pre><button type="button" class="tb copy">Copy</button></div><p>Copy the folder into the skills folder of your agent.</p></div>
+</div>
+<ol class="then">
+<li><h3>Ask your agent</h3><div class="cmd"><pre><code>skillflow help</code></pre><button type="button" class="tb copy">Copy</button></div></li>
+<li><h3>Or draw a flow yourself</h3><div class="cmd"><pre><code>&lt;skills-folder&gt;/skillflow/skillflowctl page &lt;skill&gt;</code></pre><button type="button" class="tb copy">Copy</button></div></li>
+<li><h3>Or try it here</h3><a class="ghost" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></li>
+</ol>
+</div>
+
+<p class="sr" aria-live="polite" id="said"></p>
+</div></section>
+
+<section id="tutorial" aria-labelledby="tutorial-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="tutorial-h">Tutorial</h2>
+<div class="lead"><p><strong>From one step to the flow at the top of the page.</strong>Each step adds one construct and marks the lines and cards that it changed.</p></div></div>
+<figure class="tut" aria-label="Tutorial: a flow in <!--steps--> steps">
+<!--tutorial-->
+<div class="tnav" hidden><span class="tbar" aria-hidden="true"><i></i></span><span class="tpos sr" aria-live="polite"></span><button type="button" class="ghost" data-go="-1"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg>Back</button><button type="button" class="primary" data-go="1">Next<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button></div>
+</figure>
+<div class="tdone"><p>This is the flow at the top of the page. Change it in the Playground, or read how to write a good flow.</p>
+<div class="ctas"><a class="primary" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a><a class="ghost" href="play/#h-best" data-help="h-best">Best practices</a></div></div>
+</div></section>
+
+<section id="playground" aria-labelledby="playground-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="playground-h">Playground</h2>
+<div class="lead"><p><strong>SkillFlow's own flow, in the real editor.</strong>Change the text and the graph redraws. It runs in your browser and sends nothing.</p></div></div>
+<div class="pg">
+<div class="pgbar">
+<span class="file"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>skillflow/flow.kdl</span>
+<nav class="chap" aria-label="Open a section of Help in the playground"><span class="chl"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5c2-1 4-1 6 .5 2-1.5 4-1.5 6-.5v9c-2-1-4-1-6 .5-2-1.5-4-1.5-6-.5zM8 4v9"/></svg>Learn</span><!--help-chapters--></nav>
+<a class="primary newtab" href="play/" target="_blank" rel="noopener">Open in a new tab<svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 8 8M11.5 9.5v4h-9v-9h4"/></svg></a>
+</div>
+<iframe src="play/" title="SkillFlow playground: the flow of SkillFlow in the editor" loading="lazy"></iframe>
+</div>
+</div></section>
+
+
+
+<section id="why" aria-labelledby="why-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="why-h">Why the language exists</h2>
-<p>Most workflow languages are imperative, or need a runtime that executes them. SkillFlow is neither: a flow file states intent, and nothing executes it.</p>
-<p>Andrej Karpathy calls programs written as natural-language prompts Software 3.0. A skill is such a program, combined with deterministic code. In a flow, each node names who acts.</p>
+<div class="lead"><p><strong>A flow file states intent. Nothing executes it.</strong>Most workflow languages are imperative or need a runtime. A skill is a prompt, which Andrej Karpathy calls Software 3.0, mixed with code, so each node of a flow names who acts.</p></div></div>
+<figure class="eq" aria-label="What a skill ships, what joins it at run time, and which executor runs each part">
+<div class="eq-f">
+<span class="eq-l">skill</span><span class="op" aria-hidden="true">=</span>
+<div class="eq-g ship">
+<div class="eq-t llm" data-k="llm"><span class="w">prompts</span><span class="era">Software 3.0</span><code class="pth">SKILL.md · references/</code><span class="by"><code>by=llm</code><br>a model runs them</span></div>
+<span class="op" aria-hidden="true">+</span>
+<div class="eq-t code" data-k="code"><span class="w">code</span><span class="era">Software 1.0</span><code class="pth">scripts/</code><span class="by"><code>by=code</code><br>runs as written</span></div>
+<span class="op" aria-hidden="true">+</span>
+<div class="eq-t data" data-k="data"><span class="w">assets</span><span class="era">data</span><code class="pth">assets/</code><span class="by">templates and data that the steps read; no executor</span></div>
+<span class="eq-b">in the skill folder</span>
+</div>
+<span class="op" aria-hidden="true">+</span>
+<div class="eq-g run">
+<div class="eq-t model" data-k="llm"><span class="w">a model</span><span class="era">Software 2.0</span><code class="pth">your agent</code><span class="by">its weights run the prompts</span></div>
+<span class="op" aria-hidden="true">+</span>
+<div class="eq-t human" data-k="human"><span class="w">you</span><span class="era">not software</span><code class="pth">the user</code><span class="by"><code>by=human</code><br>you decide and approve</span></div>
+<span class="eq-b">at run time</span>
+</div>
+</div>
+<figcaption>Software 1.0, 2.0, and 3.0 are terms of Andrej Karpathy, 2025; the mapping to the parts of a skill is SkillFlow's.</figcaption>
+</figure>
+
 <div class="pair">
-<div><div class="pane-h">SKILL.md<span>prose</span></div><pre class="prose" tabindex="0" aria-label="Part of a SKILL.md file">Run `scripts/collect.sh &lt;tag&gt;`. If it exits with a non-zero code, the tag does not exist: tell the user and stop.
+<div><div class="pane-h">SKILL.md<span class="tag">prose</span></div><pre class="prose" tabindex="0" aria-label="Part of a SKILL.md file">Run `scripts/collect.sh &lt;tag&gt;`. If it exits with a non-zero code, the tag does not exist: tell the user and stop.
 
 Load the style-guide skill. Group the changes by type: features first, then fixes.</pre></div>
-<div><div class="pane-h">flow.kdl<span>intent</span></div><pre class="kdl" tabindex="0" aria-label="The same part as a flow"><code><!--flow-body:why--></code></pre></div>
+<div class="to" aria-hidden="true"><span><svg class="g" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></div>
+<div><div class="pane-h">flow.kdl<span class="tag intent">intent</span></div><pre class="kdl" tabindex="0" aria-label="The same part as a flow"><code><!--flow-body:why--></code></pre></div>
 </div>
 <div class="tw"><table>
 <thead><tr><th>Constraint of a conversation with a model</th><th>Where the language shows it</th></tr></thead>
 <tbody><tr><td style="white-space:normal">Text that enters the context stays there until the session resets or the conversation is compacted.</td><td><code>skill=</code> on a step runs another skill. Its instructions stay loaded for every node after that step.</td></tr></tbody>
 </table></div>
-</section>
+</div></section>
 
-<section id="principles" aria-labelledby="principles-h">
-<h2 id="principles-h">Basic principles</h2>
-<ol>
-<li>One flow file describes exactly one skill.</li>
-<li>The flow file is the source of truth; the skill implements it.</li>
-<li>Sync works in both directions: flow to skill, or skill to flow.</li>
-<li>A flow states intent: steps, decisions, data, dialogue with the user, invariants, and failures, without low-level detail.</li>
-<li>Each step and decision names who acts: <code>by=llm</code>, <code>by=code</code>, or <code>by=human</code>.</li>
+<section id="principles" aria-labelledby="principles-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="principles-h">Basic principles</h2></div>
+<ol class="pr">
+<li><p>One flow file describes exactly one skill.</p><div class="px"><code class="spec">flow.kdl</code><span class="ar" aria-hidden="true">↔</span><code>release-notes/<small>SKILL.md · scripts/ · references/</small></code></div></li>
+<li><p>The flow file is the source of truth; the skill implements it.</p><div class="px"><code class="spec">flow.kdl</code><span class="ar" aria-hidden="true">→</span><code>release-notes/</code></div></li>
+<li><p>Sync works in both directions: flow to skill, or skill to flow.</p><div class="px"><code class="spec">flow.kdl</code><span class="ar" aria-hidden="true">⇄</span><code>release-notes/</code></div></li>
+<li><p>A flow states intent: steps, decisions, data, dialogue with the user, invariants, and failures, without low-level detail.</p><div class="px"><pre class="kdl" aria-label="A step"><code><!--flow-body:step--></code></pre></div></li>
+<li><p>Each step and decision names who acts: <code>by=llm</code>, <code>by=code</code>, or <code>by=human</code>.</p><div class="px" aria-hidden="true"><code class="by llm">llm</code><code class="by code">code</code><code class="by human">human</code></div></li>
 </ol>
-</section>
+</div></section>
 
-<section id="language" aria-labelledby="language-h">
-<h2 id="language-h">The language by example</h2>
-<div class="tw"><table>
-<thead><tr><th>Executor</th><th>Who acts</th></tr></thead>
-<tbody>
-<tr><td><code>by=llm</code></td><td>the model, subagents included</td></tr>
-<tr><td><code>by=code</code></td><td>a bundled script or a fixed command whose result needs no judgment</td></tr>
-<tr><td><code>by=human</code></td><td>the user, who decides or acts</td></tr>
-</tbody>
+<section id="language" aria-labelledby="language-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="language-h">The language by example</h2></div>
+<div class="tw execs"><table>
+<caption class="sr">Executors, and who acts for each</caption>
+<thead><tr><th class="llm" scope="col"><code>by=llm</code></th><th class="code" scope="col"><code>by=code</code></th><th class="human" scope="col"><code>by=human</code></th></tr></thead>
+<tbody><tr><td>the model, subagents included</td><td>a bundled script or a fixed command whose result needs no judgment</td><td>the user, who decides or acts</td></tr></tbody>
 </table></div>
 <div class="tiles">
 <article class="tile"><div><h3><code>context</code></h3><p>Facts about the whole skill.</p></div>
@@ -236,11 +593,13 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 <figure class="cv" aria-hidden="true"><!--graph:invariant--></figure>
 <pre class="kdl" tabindex="0" aria-label="invariant example"><code><!--flow-body:invariant--></code></pre></article>
 </div>
-</section>
+</div></section>
 
-<section id="modes" aria-labelledby="modes-h">
+<section id="modes" aria-labelledby="modes-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="modes-h">Modes</h2>
-<p>The flow file is the specification. Reverse exists to make the first flow, and for the case where the skill has moved ahead of its flow.</p>
+<div class="lead"><p><strong>Say a mode to your agent, or run a command yourself.</strong>Reverse makes the first flow of a skill, and catches a flow up with its skill.</p></div></div>
+<div class="modes">
 <div class="tw wide" tabindex="0" role="region" aria-label="Modes that an agent runs"><table>
 <thead><tr><th>Say to the agent</th><th>Use it for</th><th>Source of truth</th><th>Result</th></tr></thead>
 <tbody>
@@ -261,14 +620,22 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 <tr><td><code>edit --offline</code></td><td style="white-space:normal">writes the editor as one page that needs no server, like the <a href="play/">Playground</a></td></tr>
 </tbody>
 </table></div>
-</section>
+</div>
+</div></section>
 
-<section id="kdl" aria-labelledby="kdl-h">
+<section id="kdl" aria-labelledby="kdl-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="kdl-h">Why KDL</h2>
-<p>A flow file is a KDL 2.0.0 document.</p>
-<div class="tw wide" tabindex="0" role="region" aria-label="KDL compared with Markdown and Markdoc"><table>
-<caption class="hint" style="caption-side:bottom;text-align:left;padding:8px 12px">— not compared</caption>
-<thead><tr><th></th><th>KDL 2.0</th><th>Structured Markdown</th><th>Markdoc</th></tr></thead>
+<div class="lead"><p><strong>A flow file is a KDL 2.0.0 document.</strong></p></div></div>
+<ul class="why4">
+<li><h3>The skeleton is data</h3><p>A parser returns the tree; the validator checks it.</p></li>
+<li><h3>Intent stays in strings</h3><p>Names hold the structure; strings hold the intent.</p></li>
+<li><h3>Mistakes fail loudly</h3><p>The parser rejects almost-right text, like <code>true</code> from KDL 1.</p></li>
+<li><h3>Nothing to install</h3><p>SkillFlow ships its KDL parser, with no dependencies.</p></li>
+</ul>
+<div class="tw wide kdlt" tabindex="0" role="region" aria-label="KDL compared with Markdown and Markdoc"><table>
+<caption class="muted" style="caption-side:bottom;text-align:left;padding:10px 16px;font-size:var(--fs-13)">— not compared</caption>
+<thead><tr><th></th><th>KDL 2.0 · chosen</th><th>Structured Markdown</th><th>Markdoc</th></tr></thead>
 <tbody>
 <tr><th scope="row">Skeleton for a script</th><td>Nodes, arguments, properties, and child blocks; a parser returns the tree</td><td>Own conventions and an own parser; only a linter catches "almost right" text</td><td>Tags <code>{% tag %}</code> on Markdown nodes</td></tr>
 <tr><th scope="row">Parsers</th><td>In Python and JavaScript; SkillFlow ships one with no dependencies</td><td>None for these conventions</td><td>Official one in JavaScript only</td></tr>
@@ -279,42 +646,124 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 <tr><th scope="row">Written by a model</th><td>A model may write KDL 1 forms, such as <code>true</code> for <code>#true</code>; the parser rejects them</td><td>Models write it with confidence; a linter catches drift from the conventions</td><td>—</td></tr>
 </tbody>
 </table></div>
-</section>
+</div></section>
 
-<section id="licenses" aria-labelledby="licenses-h">
+<section id="licenses" aria-labelledby="licenses-h"><div class="wrap">
+<div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="licenses-h">Licenses</h2>
-<p>Each page that SkillFlow renders shows the third-party notices in its Help view.</p>
+<div class="lead"><p><strong>MIT, with the notices of each third-party part.</strong>Each page that SkillFlow renders shows them in its Help view.</p></div></div>
 <!--license-notices-->
-</section>
+</div></section>
 
-<section id="start" aria-labelledby="start-h">
-<h2 id="start-h">Start</h2>
-<p>Copy the folder <code>skills/skillflow</code> of the repository into the skills folder of your agent. It needs Node.js 22 or later; no packages, no network.</p>
-<p>Then ask the agent <code>skillflow help</code>, or run <code>&lt;skills-folder&gt;/skillflow/skillflowctl page &lt;skill&gt;</code> yourself.</p>
-<div class="links"><a class="btn" href="play/">Playground</a><a class="btn" href="flow/">The flow of SkillFlow</a><a class="btn" href="https://github.com/skovtunenko/skillflow" rel="noreferrer">GitHub</a></div>
-</section>
 
 </main>
+<footer><div class="wrap"><span>SkillFlow <!--version--></span><span>MIT License</span><a href="#what">Back to top ↑</a></div></footer>
 <script>
 // theme: auto has no attribute, so the page follows the system; a choice is kept in this browser
-const THEMES = ["auto", "light", "dark"], themeBtn = document.getElementById("theme"), root = document.documentElement;
-let theme = Math.max(0, THEMES.indexOf(root.dataset.theme));
-const showTheme = () => {
-  const t = THEMES[theme];
-  if (theme) root.dataset.theme = t; else delete root.dataset.theme;
-  themeBtn.lastChild.textContent = t[0].toUpperCase() + t.slice(1);
-  themeBtn.setAttribute("aria-label", `${["Auto theme, follows the system", "Light theme", "Dark theme"][theme]}. Switch to ${THEMES[(theme + 1) % 3]}.`);
-};
-themeBtn.addEventListener("click", () => {
-  theme = (theme + 1) % 3;
-  try { localStorage.setItem("skillflow-theme", THEMES[theme]); } catch { /* storage is off: the choice lasts for this page */ }
-  showTheme();
+const root = document.documentElement, themeTray = document.querySelector(".theme");
+const themeBtns = [...themeTray.querySelectorAll("[data-theme-set]")];
+const paintTheme = () => { const t = root.dataset.theme || "auto"; for (const b of themeBtns) b.setAttribute("aria-pressed", String(b.dataset.themeSet === t)); };
+for (const b of themeBtns) b.addEventListener("click", () => {
+  const t = b.dataset.themeSet;
+  if (t === "auto") delete root.dataset.theme; else root.dataset.theme = t;
+  try { localStorage.setItem("skillflow-theme", t); } catch { /* storage is off: the choice lasts for this page */ }
+  paintTheme();
 });
-themeBtn.hidden = false;
-showTheme();
+themeTray.hidden = false;
+paintTheme();
+
+// the section in view is marked in the top bar
+const tocLinks = new Map([...document.querySelectorAll(".toc a")].map((a) => [a.hash.slice(1), a]));
+const spy = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) for (const [id, a] of tocLinks) {
+    if (id === e.target.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+  }
+}, {rootMargin: "-40% 0px -55% 0px"});
+for (const s of document.querySelectorAll("main section[id]")) spy.observe(s);
+
+// install tabs: without script every panel shows; arrow keys move between tabs
+const tabs = [...document.querySelectorAll('.inst [role="tab"]')];
+const pick = (tab) => {
+  for (const t of tabs) {
+    const on = t === tab;
+    t.setAttribute("aria-selected", String(on));
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+  }
+};
+for (const t of tabs) {
+  t.addEventListener("click", () => pick(t));
+  t.addEventListener("keydown", (e) => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[e.key];
+    if (!step) return;
+    const next = tabs[(tabs.indexOf(t) + step + tabs.length) % tabs.length];
+    pick(next); next.focus(); e.preventDefault();
+  });
+}
+if (tabs.length) pick(tabs[0]);
+
+const said = document.getElementById("said");
+for (const b of document.querySelectorAll("button.copy")) b.addEventListener("click", async () => {
+  const text = b.previousElementSibling.textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; said.textContent = "Copied to the clipboard."; }
+  catch { b.textContent = "Select it"; said.textContent = "The browser did not allow a copy. Select the text and copy it."; }
+  setTimeout(() => { b.textContent = "Copy"; }, 1600);
+});
+
+// tutorial: one step in view; without script every step shows, one under the other
+const tut = document.querySelector(".tut");
+if (tut) {
+  const stepTabs = [...tut.querySelectorAll('[role="tab"]')], nav = tut.querySelector(".tnav"), done = document.querySelector(".tdone");
+  const pos = nav.querySelector(".tpos"), [back, next] = nav.querySelectorAll("button");
+  let at = 0;
+  const go = (i, focus) => {
+    at = Math.max(0, Math.min(stepTabs.length - 1, i));
+    stepTabs.forEach((t, k) => {
+      t.setAttribute("aria-selected", String(k === at)); t.tabIndex = k === at ? 0 : -1; t.classList.toggle("done", k < at);
+      document.getElementById(t.getAttribute("aria-controls")).hidden = k !== at;
+    });
+    pos.textContent = `Step ${at + 1} of ${stepTabs.length}`;
+    nav.querySelector(".tbar i").style.setProperty("--p", `${(at + 1) / stepTabs.length * 100}%`);
+    back.disabled = at === 0; next.disabled = at === stepTabs.length - 1;
+    done.hidden = at !== stepTabs.length - 1;
+    stepTabs[at].scrollIntoView({block: "nearest", inline: "nearest"});
+    if (focus) stepTabs[at].focus();
+  };
+  stepTabs.forEach((t, k) => {
+    t.addEventListener("click", () => go(k));
+    t.addEventListener("keydown", (e) => {
+      const d = {ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1}[e.key], to = e.key === "Home" ? 0 : e.key === "End" ? stepTabs.length - 1 : null;
+      if (d) go(k + d, true); else if (to !== null) go(to, true); else return;
+      e.preventDefault();
+    });
+  });
+  back.addEventListener("click", () => go(at - 1));
+  next.addEventListener("click", () => go(at + 1));
+  nav.hidden = false;
+  go(0);
+  // the marks animate only after a step is chosen, not on the first paint
+  requestAnimationFrame(() => tut.classList.add("live"));
+}
+
+// a link to a section of Help opens it in the playground of this page; the viewer reads the address of its frame
+const frame = document.querySelector(".pg iframe");
+for (const a of document.querySelectorAll("a[data-help]")) a.addEventListener("click", (e) => {
+  if (!frame) return;
+  e.preventDefault();
+  for (const c of document.querySelectorAll(".chap a")) if (c.dataset.help === a.dataset.help) c.setAttribute("aria-current", "true"); else c.removeAttribute("aria-current");
+  document.getElementById("playground").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth"});
+  const hash = "#" + a.dataset.help;
+  try {
+    // a loaded playground: write its address without a navigation, which would also scroll this page, and tell the viewer
+    const w = frame.contentWindow;
+    if (w.location.pathname.endsWith("/play/") && w.skillflow) { w.history.replaceState(null, "", hash); w.dispatchEvent(new HashChangeEvent("hashchange")); return; }
+  } catch { /* another origin, as a file opened from disk: load the address */ }
+  frame.src = "play/" + hash;
+});
 
 for (const fig of document.querySelectorAll("[data-pair]")) {
   let pin = "";
+  for (const b of fig.querySelectorAll(".exbar button[data-by]")) b.querySelector(".ct").textContent = fig.querySelectorAll(`.cv [data-node][data-by="${b.dataset.by}"]`).length;
   const keyOf = (el) => (el.dataset.node ? "node=" + el.dataset.node : "by=" + el.dataset.by);
   const show = (key) => {
     const [k, v] = key.split("=");
@@ -327,6 +776,8 @@ for (const fig of document.querySelectorAll("[data-pair]")) {
     pin = pin === keyOf(t) ? "" : keyOf(t);
     for (const b of fig.querySelectorAll("button")) b.setAttribute("aria-pressed", String(keyOf(b) === pin));
     show(pin);
+    // a stacked layout puts the code below the graph: bring the paired line into view
+    if (pin && t.closest(".cv")) fig.querySelector(".ln.on")?.scrollIntoView({block: "nearest"});
   });
   fig.addEventListener("mouseover", (e) => { const t = e.target.closest("[data-node]"); show(t ? keyOf(t) : pin); });
   fig.addEventListener("mouseleave", () => show(pin));

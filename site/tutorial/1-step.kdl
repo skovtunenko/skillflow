@@ -1,0 +1,4 @@
+// Start with one step | A step is one action: a name, who acts, and its intent.
+skillflow 1.0
+
+step draft by=llm "Group the changes by type. Revise until the user approves."

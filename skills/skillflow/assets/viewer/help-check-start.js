@@ -36,6 +36,35 @@
     }
     vHelp.addEventListener('scroll', spy, { passive: true });
     spy();
+    // a section link writes the address and scrolls Help itself: the browser's own jump would also scroll a page that holds this one in a frame
+    toc.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href^="#h-"]');
+      if (!a) return;
+      e.preventDefault();
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) { /* no address in this host */ }
+      helpTo(a.getAttribute('href').slice(1));
+    });
+    // the example graphs take their size after the jump and push the section down: Help holds it until the reader moves
+    sized(holdHelp).observe(vHelp.querySelector('.help-in') || vHelp);
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) { vHelp.addEventListener(t, function () { helpHeld = null; }, { passive: true }); });
+  }
+  var HELP_ADDRESS = /^#(help|h-[a-z0-9-]+)$/;
+  var helpHeld = null;  // the heading that Help keeps under its section links
+  // scrolls Help only, so the heading sits under the section links; an unknown section shows the top of Help
+  function holdHelp() {
+    if (!helpHeld || !vHelp.offsetHeight) return;
+    var toc = vHelp.querySelector('.help-toc');
+    vHelp.scrollTop += helpHeld.getBoundingClientRect().top - vHelp.getBoundingClientRect().top - (toc ? toc.offsetHeight : 0) - 8;
+  }
+  function helpTo(id) {
+    helpHeld = id === 'help' ? null : vHelp.querySelector('#' + id);
+    if (helpHeld) holdHelp(); else vHelp.scrollTop = 0;
+  }
+  function readHelpAddress() {
+    var m = HELP_ADDRESS.exec(location.hash);
+    if (!m) return;
+    if (state.view !== 'help') showView('help');
+    helpTo(m[1]);
   }
   // a flow of Help: its source and its graph, linked both ways by hover, click and focus; help.html holds the points to notice of the tutorial example
   function drawExample(host, ex) {
@@ -193,6 +222,11 @@
     if (carry.sheet) openSheet(); else closeSheet();
   }
   if (prefs.view && prefs.view !== 'graph') showView(prefs.view);
+  // #help, or #h-<section> of Help, opens Help at that section: a link from another page can point at one section.
+  // The address wins over the view kept for this page; it is not kept itself. A viewer that takes over from another one (the edit
+  // page draws each valid text anew) reads it too: the address stays only while Help is in view, and Help is built anew at its top.
+  readHelpAddress();
+  listen(window, 'hashchange', readHelpAddress);
   var openScn = carry ? false : readScnAddress();
   scnAddressRead = true;
   if (openScn) go({ kind: 'scenario' }, true);

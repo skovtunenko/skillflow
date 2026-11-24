@@ -1,7 +1,7 @@
   // Owns saving the page with its comments to an HTML file, and autosave. Assigns comment-store.js's copyId,
   // fileVersion, savedRev and savedAt.
   // ---------- saved page: the page writes itself, with the comments embedded, to an HTML file ----------
-  // As in interview-helper-builder: the first save asks where (File System Access API); later changes save to the same
+  // The first save asks where (File System Access API); later changes save to the same
   // file about 4 s after each change while this tab stays open. Without the API, each save downloads a copy.
   // downloaded: the last save handed the file to the browser's download, which the reader can still cancel
   var AUTOSAVE_MS = 4000, saveHandle = carry ? carry.saveHandle : null, saveError = '', downloaded = carry ? carry.downloaded : false, autosaveTimer = null;
