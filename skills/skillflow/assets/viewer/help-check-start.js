@@ -44,8 +44,10 @@
       try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) { /* no address in this host */ }
       helpTo(a.getAttribute('href').slice(1));
     });
-    // the example graphs take their size after the jump and push the section down: Help holds it until the reader moves
+    // the example graphs take their size after the jump and push the section down, and the browser's own jump to the
+    // address on load can land after ours: Help holds the section until the reader moves
     sized(holdHelp).observe(vHelp.querySelector('.help-in') || vHelp);
+    vHelp.addEventListener('scroll', holdHelp, { passive: true });
     ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) { vHelp.addEventListener(t, function () { helpHeld = null; }, { passive: true }); });
   }
   var HELP_ADDRESS = /^#(help|h-[a-z0-9-]+)$/;
@@ -54,7 +56,8 @@
   function holdHelp() {
     if (!helpHeld || !vHelp.offsetHeight) return;
     var toc = vHelp.querySelector('.help-toc');
-    vHelp.scrollTop += helpHeld.getBoundingClientRect().top - vHelp.getBoundingClientRect().top - (toc ? toc.offsetHeight : 0) - 8;
+    var off = helpHeld.getBoundingClientRect().top - vHelp.getBoundingClientRect().top - (toc ? toc.offsetHeight : 0) - 8;
+    if (Math.abs(off) >= 1) vHelp.scrollTop += off;  // under a pixel: a fractional position, and the scroll it causes would come back here
   }
   function helpTo(id) {
     helpHeld = id === 'help' ? null : vHelp.querySelector('#' + id);

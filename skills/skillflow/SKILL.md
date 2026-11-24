@@ -2,7 +2,7 @@
 name: skillflow
 description: Use when the user says "skillflow", "skillflow help", "skillflow reverse", "skillflow author", "skillflow check", "skillflow sync", or "skillflow explain", or when you change a skill whose folder has a flow file (flow.kdl or <skill>.kdl).
 metadata:
-  version: "2026.11.24.1"
+  version: "2026.11.24.2"
 ---
 
 # SkillFlow

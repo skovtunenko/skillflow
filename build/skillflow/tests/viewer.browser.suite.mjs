@@ -1737,6 +1737,12 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "help-address")) + "#h-best");
     await near(page, "h-best");
     assert.deepEqual(await page.eval(AT("h-best")), {help: true, at: true, hash: "#h-best"});
+    // a scroll the reader did not make, as the browser's own jump to the address on load, comes back; a wheel lets go
+    await page.eval("(document.getElementById('v-help').scrollTop -= 200, true)");
+    await near(page, "h-best");
+    await page.eval("(() => { const h = document.getElementById('v-help'); h.dispatchEvent(new WheelEvent('wheel')); h.scrollTop -= 200; return true; })()");
+    await page.eval("new Promise((r) => setTimeout(r, 300))");
+    assert.equal((await page.eval(AT("h-best"))).at, false, "a wheel lets the reader move Help");
     await page.eval("document.getElementById('vt-graph').click(), true");
     assert.equal(await page.eval("location.hash"), "", "leaving Help drops the address");
     // a new address opens Help again, with no reload: a page that holds this one in a frame changes only the address
