@@ -359,6 +359,7 @@
     return both;
   }
   function showView(name) {
+    var left = state.view === 'help' && name !== 'help';
     state.view = name;
     var both = markTabs();
     VIEWS.forEach(function (v) { document.getElementById('v-' + v[0]).hidden = !(v[0] === name || (both && v[0] !== 'help')); });
@@ -366,6 +367,8 @@
     divider.hidden = !both;
     if (name === 'source' || both) buildSource();
     if (name === 'help') buildHelp();
+    // leaving Help drops its address, so a later link to the same section opens Help again
+    if (left && /^#(help|h-[a-z0-9-]+)$/.test(location.hash)) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* no address in this host */ }
     if (name === 'graph' || both) applyZoom();
   }
 

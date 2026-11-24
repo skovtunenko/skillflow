@@ -1,0 +1,10 @@
+// Name who acts | A script collects and saves; the model writes; a person posts.
+skillflow 1.0
+
+step collect-changes by=code "Run collect.sh for the tag."
+
+step draft by=llm "Group the changes by type. Revise until the user approves."
+
+step publish by=code "Add the notes to CHANGELOG.md."
+
+step announce by=human "Post the notes to the team channel."

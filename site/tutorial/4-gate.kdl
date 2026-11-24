@@ -1,0 +1,16 @@
+// Let a person approve | A gate waits for the user; approved and revise are implied.
+skillflow 1.0
+
+step collect-changes by=code "Run collect.sh for the tag." {
+	on-fail {
+		end "the tag does not exist"
+	}
+}
+
+step draft by=llm "Group the changes by type. Revise until the user approves."
+
+gate approved "Did the user approve the draft?"
+
+step publish by=code "Add the notes to CHANGELOG.md."
+
+step announce by=human "Post the notes to the team channel."

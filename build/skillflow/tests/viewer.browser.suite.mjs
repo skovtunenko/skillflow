@@ -116,8 +116,12 @@ async function launchOnce() {
         return r.result.value;
       },
       async until(expression, ms = 10000) {
-        for (const end = Date.now() + ms; Date.now() < end; await sleep(100)) if (await page.eval(expression).catch(() => false)) return;
-        throw new Error(`timed out waiting for ${expression}`);
+        let last;
+        for (const end = Date.now() + ms; Date.now() < end; await sleep(100)) {
+          try { last = await page.eval(expression); } catch (e) { last = e.message; continue; }
+          if (last) return;
+        }
+        throw new Error(`timed out waiting for ${expression}; last value: ${JSON.stringify(last)}`);
       },
       async go(target) {
         await send("Page.navigate", {url: target}, sessionId);
@@ -1720,6 +1724,48 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     }
   });
 
+  test("Help address: #h-<section> opens Help at that section, in a page and in the offline editor; leaving Help drops it", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    // the section heading sits right under the sticky section links of Help
+    const AT = (id) => `(() => { const h = document.getElementById('v-help'), s = document.getElementById('${id}'), toc = document.querySelector('.help-toc');
+      return { help: !h.hidden, at: !!s && Math.abs(s.getBoundingClientRect().top - h.getBoundingClientRect().top - toc.offsetHeight - 8) <= 2, hash: location.hash }; })()`;
+    // on a timeout, say where the section and Help stood
+    const near = (p, id) => p.until(`${AT(id)}.at`).catch(async (e) => {
+      throw new Error(`${e.message}; offsets: ${JSON.stringify(await p.eval(`(() => { const h = document.getElementById('v-help'), s = document.getElementById('${id}');
+        return { section: s && s.getBoundingClientRect().top - h.getBoundingClientRect().top, toc: document.querySelector('.help-toc').offsetHeight, scrollTop: h.scrollTop, hidden: h.hidden }; })()`))}`);
+    });
+    const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "help-address")) + "#h-best");
+    await near(page, "h-best");
+    assert.deepEqual(await page.eval(AT("h-best")), {help: true, at: true, hash: "#h-best"});
+    // a scroll the reader did not make, as the browser's own jump to the address on load, comes back; a wheel lets go
+    await page.eval("(document.getElementById('v-help').scrollTop -= 200, true)");
+    await near(page, "h-best");
+    await page.eval("(() => { const h = document.getElementById('v-help'); h.dispatchEvent(new WheelEvent('wheel')); h.scrollTop -= 200; return true; })()");
+    await page.eval("new Promise((r) => setTimeout(r, 300))");
+    assert.equal((await page.eval(AT("h-best"))).at, false, "a wheel lets the reader move Help");
+    await page.eval("document.getElementById('vt-graph').click(), true");
+    assert.equal(await page.eval("location.hash"), "", "leaving Help drops the address");
+    // a new address opens Help again, with no reload: a page that holds this one in a frame changes only the address
+    await page.eval("(window.__same = 1, location.hash = '#h-nodes', true)");
+    await near(page, "h-nodes");
+    assert.deepEqual(await page.eval(`[${AT("h-nodes")}.hash, window.__same]`), ["#h-nodes", 1]);
+    // a section link writes the address and scrolls Help itself
+    await page.eval("document.querySelector('.help-toc a[href=\"#h-best\"]').click(), true");
+    await near(page, "h-best");
+    assert.equal(await page.eval("location.hash"), "#h-best");
+    // an unknown section opens Help at its top; #scenario stays the Scenario's
+    await page.eval("(document.getElementById('vt-graph').click(), location.hash = '#h-nope', true)");
+    await page.until("!document.getElementById('v-help').hidden");
+    assert.equal(await page.eval("document.getElementById('v-help').scrollTop"), 0);
+    // the offline editor draws a blank flow, then its own: the second viewer keeps Help and the section
+    const flow = path.join(tmp, "help-address.kdl"), offline = path.join(tmp, "help-address-edit.html"), log = console.log;
+    fs.writeFileSync(flow, EXAMPLE);
+    console.log = () => {};
+    try { assert.equal(main(["edit", flow, "--offline", offline]), 0); } finally { console.log = log; }
+    const edit = await (await fresh()).open(url(offline) + "#h-best", "Number(document.documentElement.dataset.renders) >= 1");
+    await near(edit, "h-best");
+    assert.deepEqual(await edit.eval(AT("h-best")), {help: true, at: true, hash: "#h-best"});
+  });
   test("Help: four sections, and an example that fills the view and links lines, cards and points to notice", async (t) => {
     if (unavailable) return t.skip(unavailable);
     const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "help-trainer")));

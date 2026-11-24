@@ -118,9 +118,9 @@ test("a typo names the nearest command", () => {
 });
 
 test("menu rows: number, name, status, path; › marks the last choice", () => {
-  const rows = menuRows([{name: "uv-only", flow: "b/uv-only/flow.kdl", errors: 0}, {name: "x", flow: "x/flow.kdl", errors: 2}, {name: "y", flow: "y.kdl", errors: null}], "x/flow.kdl");
+  const rows = menuRows([{name: "release", flow: "b/release/flow.kdl", errors: 0}, {name: "x", flow: "x/flow.kdl", errors: 2}, {name: "y", flow: "y.kdl", errors: null}], "x/flow.kdl");
   assert.deepEqual(rows, [
-    "   1  uv-only  ok          b/uv-only/flow.kdl",
+    "   1  release  ok          b/release/flow.kdl",
     "›  2  x        2 errors    x/flow.kdl",
     "   3  y        unreadable  y.kdl",
   ]);
