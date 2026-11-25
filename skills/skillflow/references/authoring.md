@@ -4,6 +4,13 @@ This file holds the intent test and the rules for writing a flow. Reverse,
 author, check, and sync use them. [grammar.md](grammar.md) defines every
 construct; a rule number here, such as rule 3, is a rule of grammar.md.
 
+## Contents
+
+- [The intent test](#the-intent-test)
+- [Writing a flow](#writing-a-flow): granularity, order, labels, coverage, what
+  the human does, skipping a gate, an ask with no fixed place, rules with
+  exceptions, prose
+
 ## The intent test
 
 A fact belongs in the skeleton only when a reviewer or the skill's user would
@@ -55,8 +62,9 @@ the skeleton. Everything else is prose or stays only in the skill.
   a flow `input`. Every point where the skill, or a file it sends the agent
   to, asks the user is a node; material it asks for there is that node's
   `input`. Every rule that limits what may happen during the flow and passes
-  the intent test is an `invariant`; a rule about the result is prose of the node
-  that makes it. Give each `invariant` its `by=` (rule 10): `by=code` rests
+  the intent test is an `invariant`; a rule about the result is not one: it
+  stays in the skill, and the node that makes the result names its intent in a
+  few words. Give each `invariant` its `by=` (rule 10): `by=code` rests
   on a script line that fails or blocks on the broken rule, and its sentence names that script; `by=human` rests on a
   gate or a human step that checks it; every other rule is `by=llm`. Every early exit is an `end`. A state the skill keeps
   between steps or runs (a flag, a record, a file) and never clears is an

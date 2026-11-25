@@ -179,6 +179,7 @@
     Array.prototype.forEach.call(canvas.querySelectorAll('.node'), function (d) { if (over(d)) r.textClipped.push('card ' + d.dataset.id); });
     Array.prototype.forEach.call(canvas.querySelectorAll('.cl'), function (e) {
       var cs = getComputedStyle(e), lines = e.clientHeight / parseFloat(cs.lineHeight);
+      // 3: the line clamp of .cl in viewer.css; 0.05 of a line absorbs sub-pixel rounding of the measured height
       if (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) > 0 || Math.abs(lines - Math.round(lines)) > 0.05 || Math.round(lines) > 3) r.textClipped.push('prose ' + e.closest('.node').dataset.id + ' ' + lines.toFixed(2) + ' lines');
     });
     Array.prototype.forEach.call(canvas.querySelectorAll('.node'), function (d) {

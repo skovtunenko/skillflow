@@ -36,12 +36,14 @@ if (inside(out, SITE)) fail(`--out ${out} is inside the site sources ${SITE}; pi
 const cli = join(skill, "scripts", "skillflow.mjs");
 const run = (...argv) => spawnSync(process.execPath, [cli, ...argv], {encoding: "utf8"});
 
-// 1. every example passes the skill's validator with no warning and no todo
+// 1. every example passes lint, the format check and the validator, with no warning and no todo
 const examples = readdirSync(join(SITE, "examples")).filter((name) => name.endsWith(".kdl")).sort();
+const lint = {};
 for (const name of examples) {
-  const result = run("validate", join(SITE, "examples", name));
-  const first = result.stdout.split("\n")[0];
-  if (result.status !== 0 || !/^OK [^·]*$/.test(first)) fail(`example ${name} does not pass the validator:\n${result.stdout}${result.stderr}`);
+  const result = run("lint", join(SITE, "examples", name)), lines = result.stdout.split("\n");
+  if (result.status !== 0 || !/^unchanged /.test(lines[0]) || !/^OK [^·]*$/.test(lines[1] ?? "")) fail(`example ${name} does not pass lint:\n${result.stdout}${result.stderr}`);
+  // the Modes section shows the real output of lint: the format line, the OK line, its counts, tools, and invariants (not the versions, which change with each release), with the file name only
+  lint[name] = lines.slice(0, 5).join("\n").replaceAll(join(SITE, "examples", name), name);
 }
 
 // 2. the single sources
@@ -108,14 +110,15 @@ function graphHtml(name, pair, marks) {
       `<span class="fl">fail ${ends.length ? ends.map((kid) => end(kid, "ep fail")).join("") : `<span class="ep">${e(onfail.prose || "continues")}</span>`}</span>`;
   };
   const one = (node) => {
-    const head = `<i>${node.by}</i><b>${e(node.name ?? "")}</b>`;
-    const q = node.question ? `<span class="q">${e(node.question)}</span>` : "";
+    // the spaces keep the words apart in the accessible name; a flex container does not draw them
+    const head = `<i>${node.by}</i> <b>${e(node.name ?? "")}</b>`;
+    const q = node.question ? ` <span class="q">${e(node.question)}</span>` : "";
     switch (node.kind) {
-      case "phase": return `<div class="pb">${pair ? card(node, "a", `<span>phase</span>${e(node.name)}`) : `<div class="a${m(node)}"><span>phase</span>${e(node.name)}</div>`}<div class="z">${block(node.children)}</div></div>`;
+      case "phase": return `<div class="pb">${pair ? card(node, "a", `<span>phase</span> ${e(node.name)}`) : `<div class="a${m(node)}"><span>phase</span> ${e(node.name)}</div>`}<div class="z">${block(node.children)}</div></div>`;
       case "step": {
         // an on-fail that only ends the flow is a footnote of its card, as on the flow page, so the line of the flow stays whole
         const stop = node.onfail && node.onfail.children.length && node.onfail.children.every((kid) => kid.kind === "end");
-        const foot = stop ? `<span class="ft">fail ${node.onfail.children.map((kid) => end(kid, "ep fail")).join("")}</span>` : "";
+        const foot = stop ? ` <span class="ft">fail ${node.onfail.children.map((kid) => end(kid, "ep fail")).join("")}</span>` : "";
         return card(node, `n ${node.by}`, head + foot) + (node.onfail && !stop ? failRow(node.onfail) : "");
       }
       case "decide": return card(node, `n ${node.by} dec`, head + q) + ED + fork([...node.whens, ...(node.implied ?? [])]);
@@ -235,7 +238,8 @@ const tutorial = (() => {
       `<div class="split"><div class="src"><pre class="kdl lines" tabindex="0" aria-label="Flow file of step ${s.n}"><code>${flowHtml(`tutorial-${s.n}`, false, true, added)}</code></pre></div>` +
       `<div class="cv">${graphHtml(`tutorial-${s.n}`, true, partMarks(s.n))}</div></div></div></div>`;
   }).join("\n");
-  return `<div class="rail" role="tablist" aria-label="Steps of the tutorial" aria-orientation="vertical">${rail}</div>\n<div class="tpanels">\n${panels}\n</div>`;
+  // index.html puts Back and Next between the two, so the reading order is rail, controls, step
+  return {rail: `<div class="rail" role="tablist" aria-label="Steps of the tutorial" aria-orientation="vertical">${rail}</div>`, panels: `<div class="tpanels">\n${panels}\n</div>`};
 })();
 
 // the sections of Help, from the section links of the skill's help.html: the site links to them in the playground
@@ -245,26 +249,31 @@ if (!chapters.length) fail("assets/help.html has no section links in <nav class=
 const helpLinks = chapters.map((c) => `<a class="ch" href="play/#${c.id}" data-help="${c.id}"><span class="cn" aria-hidden="true">${c.n}</span>${escapeHtml(c.title)}</a>`).join("");
 
 const licenseParts = (text) => ({license: text.trim().split("\n")[0].trim(), copyright: text.split("\n").find((line) => /^Copyright\b/.test(line))?.trim() ?? "", text: text.trim()});
-const parts = [{name: "SkillFlow", version, ...licenseParts(read(resolve(args.license)))}];
+const parts = [{name: "SkillFlow", version, url: "https://github.com/skovtunenko/skillflow", ...licenseParts(read(resolve(args.license)))}];
 const vendorDir = join(skill, "scripts", "_vendor");
+// the project link of a third-party part comes from the notice in the skill's help.html, which links its name
+const helpHtml = read(join(skill, "assets", "help.html"));
 for (const dir of readdirSync(vendorDir).sort()) {
   if (!existsSync(join(vendorDir, dir, "PIN.json"))) continue;
   const pin = JSON.parse(read(join(vendorDir, dir, "PIN.json")));
-  parts.push({name: pin.package, version: pin.version, ...licenseParts(read(join(vendorDir, dir, "LICENSE.md")))});
+  const url = [...helpHtml.matchAll(/<a href="(https:[^"]+)"[^>]*>([^<]+)<\/a>/g)].find(([, , text]) => text === pin.package)?.[1];
+  if (!url) fail(`assets/help.html has no link whose text is ${pin.package}; the site links each third-party part to its project`);
+  parts.push({name: pin.package, version: pin.version, url, ...licenseParts(read(join(vendorDir, dir, "LICENSE.md")))});
 }
 for (const part of parts) if (!part.copyright) fail(`the license of ${part.name} has no Copyright line`);
 // one card per part; a figure, so the notices do not count as section prose
 const CHEVRON = '<svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>';
+const EXT = '<svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 8 8M11.5 9.5v4h-9v-9h4"/></svg>';
 const notices = '<figure class="lic" aria-label="Licenses">\n' + parts.map((p) => {
   const e = escapeHtml;
-  return `<article class="lc"><div class="lc-h"><h3>${e(p.name)}</h3><span class="v">${e(p.version)}</span><span class="spdx">${e(p.license)}</span></div>` +
+  return `<article class="lc"><div class="lc-h"><h3><a href="${e(p.url)}" rel="noreferrer">${e(p.name)}${EXT}<span class="sr"> project page</span></a></h3><span class="v">${e(p.version)}</span><span class="spdx">${e(p.license)}</span></div>` +
     `<p class="cr">${e(p.copyright)}</p><details><summary>${CHEVRON}License text<span class="sr"> of ${e(p.name)}</span></summary><pre tabindex="0">${e(p.text)}</pre></details></article>`;
 }).join("\n") + "\n</figure>";
 
 // 3. fill the page and check it
 const template = read(join(SITE, "index.html"));
 
-const fills = {"version": escapeHtml(version), "viewer-css": viewerCss, "license-notices": notices, "tutorial": tutorial, "steps": String(steps.length), "help-chapters": helpLinks};
+const fills = {"version": escapeHtml(version), "viewer-css": viewerCss, "license-notices": notices, "tutorial-rail": tutorial.rail, "tutorial-panels": tutorial.panels,"steps": String(steps.length), "help-chapters": helpLinks, "lint-release-notes": escapeHtml(lint["release-notes.kdl"] ?? fail("examples/release-notes.kdl is missing"))};
 // `pair` variants pair code lines with graph nodes; use them only inside the <figure data-pair> of one example
 const page = template.replace(/<!--(flow|flow-body|flow-pair|graph|graph-pair):([\w-]+)-->/g, (_, kind, name) =>
   kind.startsWith("graph") ? graphHtml(name, kind === "graph-pair") : flowHtml(name, kind === "flow-body", kind === "flow-pair"))

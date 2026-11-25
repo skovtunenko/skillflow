@@ -33,15 +33,24 @@
   var brand = add(el('div', 'brand'), bhead);
   var views = el('div', 'views'); views.setAttribute('role', 'tablist'); views.setAttribute('aria-label', 'View');
   var VIEWS = [['graph', 'Graph', 'The flow as a graph'], ['source', 'Source', host ? 'The flow file: read and comment, or edit' : 'The flow file, with its line comments'], ['help', 'Help', 'How to write a flow file']];
-  // the edit page has one more tab, between the two views that it shows together: exactly one tab is on, so the page has four states
-  var TABS = host ? [VIEWS[0], ['split', 'Split', 'Graph and Source together. Press again to turn the split'], VIEWS[1], VIEWS[2]] : VIEWS;
+  // the edit page has two more tabs, between the two views that they show together: Graph beside Source, and Graph above Source.
+  // Exactly one tab is on, so the page has five states. The two split tabs draw the split and have no text: their names say it
+  var SPLITS = ['cols', 'rows'], TABS = host ? [VIEWS[0], ['cols', 'Side by side', 'Graph and Source side by side'], ['rows', 'Stacked', 'Graph above Source'], VIEWS[1], VIEWS[2]] : VIEWS;
+  // a narrow window has no room for two views side by side: it hides that tab and stacks a side-by-side split (viewer.css)
+  var narrow = window.matchMedia('(max-width:760px)');
+  if (host) listen(narrow, 'change', markTabs);
   var viewTabs = TABS.map(function (v, i) {
-    var b = tipped(button('vtab', [glyph(v[0] === 'split' ? state.dir : v[0]), add(el('span', 'lbl'), document.createTextNode(v[1]))], function () { pickView(v[0]); }), v[2]);
+    var split = SPLITS.indexOf(v[0]) >= 0;
+    var b = tipped(button('vtab' + (split ? ' vsplit' : ''), [glyph(v[0]), split ? null : add(el('span', 'lbl'), document.createTextNode(v[1]))], function () { pickView(v[0]); }), v[2]);
     b.setAttribute('role', 'tab'); b.setAttribute('aria-label', v[1]); b.id = 'vt-' + v[0]; b.dataset.view = v[0];
-    b.setAttribute('aria-controls', v[0] === 'split' ? 'v-graph v-source' : 'v-' + v[0]);
+    b.setAttribute('aria-controls', split ? 'v-graph v-source' : 'v-' + v[0]);
     b.addEventListener('keydown', function (e) {
-      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-      if (d) { e.preventDefault(); var j = (i + d + TABS.length) % TABS.length; pickView(TABS[j][0], true); viewTabs[j].focus(); }
+      // Home and End start past an end, so the step lands on the first or the last shown tab
+      var d = e.key === 'ArrowRight' || e.key === 'Home' ? 1 : e.key === 'ArrowLeft' || e.key === 'End' ? -1 : 0, j = e.key === 'Home' ? -1 : e.key === 'End' ? TABS.length : i;
+      if (!d) return;
+      e.preventDefault();
+      do j = (j + d + TABS.length) % TABS.length; while (!viewTabs[j].offsetWidth); // past a hidden tab
+      pickView(TABS[j][0]); viewTabs[j].focus();
     });
     views.appendChild(b); return b;
   });
@@ -89,8 +98,9 @@
   divider.setAttribute('aria-label', 'Resize Graph and Source'); divider.setAttribute('aria-valuemin', '20'); divider.setAttribute('aria-valuemax', '80');
   main.insertBefore(divider, vSource);
   function setRatio(r) {
+    // Graph stays within 20-80 % and Source gets the rest after the divider, so neither closes; aria-valuemin and aria-valuemax above say the same
     state.ratio = Math.max(20, Math.min(80, Math.round(r)));
-    main.style.setProperty('--ratio', state.ratio + '%'); divider.setAttribute('aria-valuenow', String(state.ratio));
+    main.style.setProperty('--ratio', state.ratio + '%'); divider.setAttribute('aria-valuenow', String(state.ratio)); divider.setAttribute('aria-valuetext', 'Graph ' + state.ratio + '%');
   }
   divider.addEventListener('pointerdown', function (down) {
     function move(e) { var r = main.getBoundingClientRect(), rows = getComputedStyle(main).gridTemplateColumns.split(' ').length < 3; setRatio(rows ? (e.clientY - r.top) / r.height * 100 : (e.clientX - r.left) / r.width * 100); }
@@ -99,16 +109,15 @@
     divider.addEventListener('pointerup', function () { divider.removeEventListener('pointermove', move); main.classList.remove('dragging'); keepPrefs(); }, { once: true });
   });
   divider.addEventListener('keydown', function (e) {
+    // an arrow key moves the divider 4 % of the room: a fine step, and 15 presses still cross the whole 20-80 range
     var d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -4 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 4 : 0;
     if (d) { e.preventDefault(); setRatio(state.ratio + d); keepPrefs(); }
   });
   setRatio(state.ratio);
-  // Graph and Source ask for one view alone, Split for the two together. A press on Split while it is on turns it: side by side,
-  // or one above the other; `arrow`: the arrow keys only move along the tabs, they never turn the split.
-  function pickView(name, arrow) {
-    if (name !== 'split') { if (name !== 'help') state.split = ''; showView(name); return keepPrefs(); }
-    if (state.split && state.view !== 'help' && !arrow) state.dir = state.dir === 'cols' ? 'rows' : 'cols';
-    state.split = state.dir;
+  // Graph and Source ask for one view alone, a split tab for the two together, side by side ('cols') or one above the other ('rows')
+  function pickView(name) {
+    if (SPLITS.indexOf(name) < 0) { if (name !== 'help') state.split = ''; showView(name); return keepPrefs(); }
+    state.split = state.dir = name;
     showView(state.view === 'help' ? 'source' : state.view); keepPrefs();
   }
   // with two views in view, the keys go to the one the reader works in
@@ -141,6 +150,7 @@
   // Zoom is not a toolbar group: it sits under the minimap in the canvas corner, so it never moves into More and stays
   // in thumb reach on a phone, where the canvas blocks the browser's page zoom and these buttons are the only one-finger zoom
   var zoomBar = add(el('div', 'tgroup zoombar'),
+    // zoom step 1.2 for both buttons, the same as the + and - keys in canvas-input.js
     button('tb', glyph('minus'), function () { zoomCenter(state.scale / 1.2); }, 'Zoom out'),
     add(el('span', 'tb zoomv'), zoomv),
     button('tb', glyph('plus'), function () { zoomCenter(state.scale * 1.2); }, 'Zoom in'),
@@ -308,6 +318,7 @@
   // wheel; the stops keep their own arrow keys, so the arrows stay out of the Tab order
   function pageBtn(side) {
     var b = button('rpage ' + side, glyph(side === 'l' ? 'back' : 'right'), function () {
+      // 80 % of the strip per press: a page of new stops, with the last ones of the old page still in sight
       stops.scrollTo({ left: stops.scrollLeft + (side === 'l' ? -0.8 : 0.8) * stops.clientWidth, behavior: glide() });
     }, side === 'l' ? 'Earlier stops' : 'Later stops');
     b.tabIndex = -1; return b;
@@ -347,15 +358,15 @@
   function openSheet() { panel.classList.add('open'); sheetBtn.replaceChildren(glyph('down')); sheetBtn.setAttribute('aria-expanded', 'true'); }
   function closeSheet() { panel.classList.remove('open'); sheetBtn.replaceChildren(glyph('up')); sheetBtn.setAttribute('aria-expanded', 'false'); }
 
-  // one tab is on: Split while Graph and Source are both in view, else the tab of the view; the Split tab draws the way it is turned
+  // one tab is on: the split's tab while Graph and Source are both in view, else the tab of the view
   function markTabs() {
-    var both = !!state.split && state.view !== 'help';
+    var both = !!state.split && state.view !== 'help', tab = both ? (narrow.matches ? 'rows' : state.split) : state.view;
     viewTabs.forEach(function (b) {
-      var on = b.dataset.view === (both ? 'split' : state.view);
+      var on = b.dataset.view === tab;
       b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
-      if (b.dataset.view === 'split') b.firstChild.replaceWith(glyph(state.dir));
     });
     slideTabs();
+    divider.setAttribute('aria-orientation', tab === 'cols' ? 'vertical' : 'horizontal'); // side by side the divider is a vertical line
     return both;
   }
   function showView(name) {

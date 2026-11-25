@@ -98,6 +98,7 @@
   // ---------- minimap ----------
   var miniView, miniScale = 1;
   function drawMini(all) {
+    // the minimap is 176 px wide; a tall flow is capped at 140 px high and gets narrower, but not under 40 px, so the map stays visible
     var mw = 176, mh = mw * state.H / state.W;
     if (mh > 140) { mh = 140; mw = Math.max(40, 140 * state.W / state.H); }
     miniScale = mw / state.W;
@@ -138,6 +139,7 @@
     // semantic zoom: below READABLE a card shows only its name, below LOD_PHASE an open phase shows only its tile;
     // --k scales the text back up so it stays about 11px on screen
     canvas.dataset.lod = s >= READABLE ? 'full' : s >= LOD_PHASE ? 'name' : 'phase';
+    // 13: the card name size in canvas px at the default 16 px root font; the 3.4 cap is reached near a scale of 0.25, below it the text shrinks with the canvas instead of growing past its box
     canvas.style.setProperty('--k', String(Math.min(3.4, Math.max(1, 11 / (13 * s)))));
     zoomv.textContent = Math.round(s * 100) + '%';
     updateMini(); queueSpy();
@@ -157,6 +159,7 @@
   var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
   function glide() { return calm.matches ? 'auto' : 'smooth'; }
   function centerOn(x, y, smooth, yFrac) {
+    // the default yFrac 0.35 puts the target at the height where the scroll spy in navigation.js reads the current stop
     var left = x * state.scale + state.offX - viewport.clientWidth / 2, top = y * state.scale + TOP - viewport.clientHeight * (yFrac == null ? 0.35 : yFrac);
     viewport.scrollTo({ left: left, top: top, behavior: smooth ? glide() : 'auto' });
   }

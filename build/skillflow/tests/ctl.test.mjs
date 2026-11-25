@@ -1,4 +1,4 @@
-// The human layer: skillflowctl, the lookup of a flow by path or skill name, page and lint, the typo hint, and the menu rows.
+// The human layer: skillflowctl, the lookup of a flow by path or skill name, page and lint, the typo hint, the menu rows, and the way out of the menu.
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
 import fs from "node:fs";
@@ -6,7 +6,7 @@ import path from "node:path";
 import {test} from "node:test";
 import {tmpDir} from "./tmp.mjs";
 import {SKILL, skillUrl} from "./skill-path.mjs";
-const {flowNames, menuRows, resolveTarget, suggestCommand} = await import(skillUrl("scripts/ctl.mjs"));
+const {ask, flowNames, menuRows, resolveTarget, suggestCommand} = await import(skillUrl("scripts/ctl.mjs"));
 
 const CTL = path.join(SKILL, "skillflowctl");
 const FLOW = "skillflow 1.0\n\nstep a by=llm\n";
@@ -38,7 +38,7 @@ test("skillflowctl.cmd runs the same script with the same program name, with CRL
   const text = fs.readFileSync(path.join(SKILL, "skillflowctl.cmd"), "utf8");
   assert.match(text, /^@echo off\r\n/);
   assert.doesNotMatch(text.replaceAll("\r\n", ""), /\n/);
-  assert.match(text, /\r\nset "SKILLFLOW_PROG=skillflowctl"\r\nnode "%~dp0scripts\\skillflow\.mjs" %\*\r\nexit \/b %ERRORLEVEL%\r\n$/);
+  assert.match(text, /\r\nset "SKILLFLOW_PROG=skillflowctl"\r\nnode "%~dp0scripts\/skillflow\.mjs" %\*\r\nexit \/b %ERRORLEVEL%\r\n$/);
 });
 
 test("a flow file is found by its folder name, its file name, or that name without a version", () => {
@@ -124,4 +124,15 @@ test("menu rows: number, name, status, path; › marks the last choice", () => {
     "›  2  x        2 errors    x/flow.kdl",
     "   3  y        unreadable  y.kdl",
   ]);
+});
+
+test("menu answer: text is trimmed; q and Ctrl+D quit with 0, Ctrl+C with 130, and no stack", async () => {
+  const {EventEmitter} = await import("node:events");
+  const prompt = (question) => Object.assign(new EventEmitter(), {question});
+  assert.equal(await ask(prompt(async () => " 2 "), ""), "2");
+  assert.equal(await ask(prompt(async () => "Q"), ""), 0);
+  const eof = prompt(() => new Promise(() => {}));
+  setImmediate(() => eof.emit("close"));
+  assert.equal(await ask(eof, ""), 0);
+  assert.equal(await ask(prompt(async () => { throw Object.assign(new Error("Aborted with Ctrl+C"), {code: "ABORT_ERR"}); }), ""), 130);
 });

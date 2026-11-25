@@ -42,6 +42,9 @@ code,kbd{font-family:var(--mono);font-size:.88em;background:var(--surface-2);bor
 /* the Save button keeps its name and tooltip but drops its label first: the save status keeps its full text down to 1001px */
 @media (max-width:1400px){.savebtn .lbl{display:none}}
 @media (max-width:1000px){.vtab{padding:4px 8px}.vtab .lbl{display:none}}
+/* the split tabs draw the split and have no text: a narrower tab; a narrow window stacks the views, so it has no side-by-side tab */
+.vtab.vsplit{padding-inline:8px}
+@media (max-width:760px){#vt-cols{display:none}}
 .brand h1{font-size:var(--fs-16);font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* one row: the name, the skill version, About and the error badge */
 .brand .bhead{display:flex;align-items:baseline;gap:8px;min-width:0}
@@ -517,7 +520,7 @@ button.sn{border:0;background:none;padding:0;font:inherit;color:var(--muted);tex
 .sl.scope{background:var(--scope);box-shadow:inset 2px 0 0 var(--scope-bar)}
 @media (hover:hover){.sl:hover,.sl.scope:hover{background:var(--scope-hover)}}
 .tk-node{color:var(--accent);font-weight:600}.tk-arg{color:var(--ink)}.tk-key{color:var(--code)}.tk-op{color:var(--muted)}
-.tk-val{color:var(--llm)}.tk-str{color:var(--output)}.tk-num,.tk-kw{color:var(--human)}.tk-br{color:var(--edge-2)}
+.tk-val{color:var(--llm)}.tk-str{color:var(--output)}.tk-num,.tk-kw{color:var(--human)}.tk-br{color:var(--muted)}
 .qm{font-size:0}.qm::before{content:'❓';font-size:var(--fs-12_5)}
 .tk-com{color:var(--muted);font-style:italic}.tk-ask{color:var(--ask);background:var(--ask-soft);border-radius:3px;font-style:normal}
 .tk-sd{color:var(--fail);font-weight:700}
@@ -903,7 +906,8 @@ main.main,.view,.stage,.viewport,.srchead{position:static;overflow:visible}
 .node.sfx-new{animation:sfxNew 2.2s ease-out}.node.sfx-chg{animation:sfxChg 2.2s ease-out}
 @keyframes sfxNew{0%,30%{box-shadow:0 0 0 5px #22c55e,0 0 28px 8px #22c55e99}100%{box-shadow:0 0 0 0 transparent}}
 @keyframes sfxChg{0%,30%{box-shadow:0 0 0 5px #f59e0b,0 0 28px 8px #f59e0b99}100%{box-shadow:0 0 0 0 transparent}}
-@media (prefers-reduced-motion:reduce){.node.sfx-new,.node.sfx-chg{animation-duration:.01s}}
+/* with reduced motion the ring stays still, until the next draw removes the class */
+@media (prefers-reduced-motion:reduce){.node.sfx-new{animation:none;box-shadow:0 0 0 4px #22c55e}.node.sfx-chg{animation:none;box-shadow:0 0 0 4px #f59e0b}}
 /* two views in view print as the graph alone: the Source view would lie over it */
 @media print{.vdivide,.panel-show,.tip,.main[data-split]>.vsource{display:none!important}.main[data-split]{display:block}}
 /* ---------- tooltip ---------- */

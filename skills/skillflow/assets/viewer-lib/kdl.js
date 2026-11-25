@@ -15,6 +15,7 @@ var sfKdl = (function () {
       if (src.startsWith('/-', i)) { push('/-', 'tk-sd'); i += 2; continue; }
       if (c === '{' || c === '}' || c === ';') { push(c, 'tk-br'); i++; start = true; continue; }
       if (c === '(' || c === ')' || c === '=' || c === '\\') { push(c, 'tk-op'); i++; continue; }
+      // 40 chars: room for the # marks of a raw string start, without copying the rest of the file at each token
       m = /^(#*)("""|")/.exec(src.slice(i, i + 40));
       if (c === '"' || (m && m[1])) {
         var hashes = m[1], q = m[2], close = q + hashes, k = i + hashes.length + q.length;

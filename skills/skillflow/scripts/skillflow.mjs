@@ -148,7 +148,7 @@ const FLAG = {
   skill: ["--skill DIR", "the target skill folder; default: skill=\"PATH\" on the first line\nof FLOW, else the folder of FLOW or the one above it, whichever\nholds SKILL.md, else the one matching skill folder in the repo"],
   check: ["--check", "write nothing; exit 1 when the file is not formatted, with the\nfirst line that differs"],
   offline: ["--offline PAGE", "start no server: write the editor as one offline page, outside\nthe skill folder; it saves through the browser"],
-  draft: ["--draft", "accept a sketch: missing executors, questions, prose, and data\npaths become todo lines, not errors; a run without --draft must\npass before check or sync"],
+  draft: ["--draft", "accept a sketch: missing executors, questions, prose, and\ndata paths become todo lines, not errors; a run without --draft\nmust pass before check or sync"],
 };
 // the launcher skillflowctl sets SKILLFLOW_PROG, so the text names the command that the person typed
 const PROGRAM = process.env.SKILLFLOW_PROG || "node skillflow.mjs";
@@ -194,7 +194,7 @@ function examples() {
     [`${PROGRAM} page ${one}`, "format and validate the flow, then write its page"],
     [`${PROGRAM} lint ${one}`, "check only; exit 1 on a problem"],
     [`${PROGRAM} edit ${one}`, "edit in the browser: the graph follows the text"],
-    [PROGRAM, "in a terminal: pick a flow and an action from a menu"],
+    [PROGRAM, "in a terminal: pick a flow and an action from a menu; q quits"],
   ]), ...(names.length ? ["", `flows here: ${names.join(", ")}`] : [])].join("\n");
 }
 

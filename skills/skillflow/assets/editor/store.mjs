@@ -37,5 +37,6 @@ export function download(name, text, type) {
   link.href = URL.createObjectURL(new Blob([text], {type}));
   link.download = name;
   link.click();
+  // revoke later, not at once: click() only starts the download, which still reads the URL; 1 s leaves room for that and frees the text soon after
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }

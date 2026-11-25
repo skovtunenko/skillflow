@@ -122,6 +122,7 @@
   // The choices come from the viewer before this one, else from the editor's memory.
   var prefs = carry || (host && host.start) || {};
   state.split = host && prefs.split ? prefs.split : ''; state.dir = state.split || prefs.dir || 'cols';
+  // ratio 55: by default the graph gets a little more than half the room, as its cards and lanes need more width than lines of text; editor/layout.mjs has the same default
   state.ratio = prefs.ratio || 55; state.srcMode = host ? prefs.srcMode || 'edit' : 'read';
   function keepPrefs() { if (host) host.remember({ view: state.view, split: state.split, dir: state.dir, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut }); }
   // a per-unit toggle wins over the stepwise level: open while its depth is within the level

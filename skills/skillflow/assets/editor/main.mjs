@@ -80,6 +80,7 @@ const host = {
   remember(prefs) {
     if (prefs.view === "help") return;
     // a cookie belongs to the host, not the port, so the next editor server finds it; an offline page has only localStorage
+    // max-age one year: the choices outlive restarts and long breaks; each new choice writes the cookie again, so only a year unused loses it
     document.cookie = `${prefsPair(prefs)}; max-age=31536000; path=/; samesite=strict`;
     try { localStorage.setItem("skillflow-editor", prefsPair(prefs)); } catch { /* storage is off: the choices last for this page */ }
   },
@@ -105,13 +106,14 @@ const code = codePane(state.ui.tokenize, {
     showSync();
     state.how = /^history/.test(event.inputType ?? "") ? "undo" : "typed"; // the browser's Undo and Redo say so
     clearTimeout(state.timer);
+    // 150 ms: one check per pause in typing, not one per key
     state.timer = setTimeout(() => run(state.how), 150);
   },
   onLine(line) { state.ui.ring(line); showProblem(problemAt(state.problems, state.active, line)); },
 });
 
 // ---------- check and redraw ----------
-const EDITOR_SKILL_HINT = "this editor has no skill folder: save, then start it for the folder with SKILL.md (skillflowctl edit <skill-dir>), or write skill=\"<path>\" on the first line and start it again";
+const EDITOR_SKILL_HINT = "this editor has no skill folder: save, then start it for the folder with SKILL.md (skillflowctl edit <skill>), or write skill=\"<path>\" on the first line and start it again";
 /** `how`: where the text is from, as history.mjs `record` reads it. */
 function run(how = "set") {
   clearTimeout(state.timer);

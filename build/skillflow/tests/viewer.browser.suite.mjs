@@ -316,7 +316,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     await page.size(1400, 900);
     const SEEN = `(() => { const box = (sel) => (document.querySelector(sel) ? document.querySelector(sel).getBoundingClientRect() : {width: 0});
       return { panel: box('.panel').width > 0, show: box('.panel-show').width > 0, stage: Math.round(box('.stage').width), focus: document.activeElement.getAttribute('aria-label') }; })()`;
-    assert.deepEqual(await page.eval("[document.querySelectorAll('#vt-split, .srcmode, #sfe').length, document.querySelector('.views').parentNode.className]"), [0, "bar"]);
+    assert.deepEqual(await page.eval("[document.querySelectorAll('#vt-cols, #vt-rows, .srcmode, #sfe').length, document.querySelector('.views').parentNode.className]"), [0, "bar"]);
     const open = await page.eval(SEEN);
     assert.deepEqual([open.panel, open.show, open.stage], [true, false, 1400 - 360]);
     const corner = await page.eval("(() => { const r = document.querySelector('.panel-hide').getBoundingClientRect(); return [Math.round(r.right), Math.round(r.top)]; })()");
@@ -2415,7 +2415,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
         tab: document.querySelector('.vtab[aria-selected=true]').id.slice(3), count: document.getElementById('pcount').textContent, focus: document.activeElement.id }; })()`;
       await page.eval("(document.getElementById('src').setSelectionRange(0, 0), true)");
       await page.eval("(document.querySelector('#sf-stale button').click(), true)");
-      assert.deepEqual(await page.eval(AT), {line: lines[0], split: "cols", tab: "split", count: `1 of ${count}`, focus: "src"}, "from the graph alone, the text comes beside it at the first problem");
+      assert.deepEqual(await page.eval(AT), {line: lines[0], split: "cols", tab: "cols", count: `1 of ${count}`, focus: "src"}, "from the graph alone, the text comes beside it at the first problem");
       await page.eval(CLICK("sf-live"));
       assert.deepEqual([(await page.eval(AT)).line, (await page.eval(AT)).count], [lines[1], `2 of ${count}`], "each press is one step");
       // the ruler: a mark for each problem line with its message as the tip, the mark of the cursor's line ringed, a shade for the part in view
@@ -2549,13 +2549,13 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     try {
       const chrome = await fresh(), page = await chrome.open(first.url, DRAWN);
       // one page, one header: the viewer's own, with no second row of editor buttons
-      assert.deepEqual(await page.eval("[document.querySelectorAll('header').length, document.querySelectorAll('iframe').length, [...document.querySelectorAll('.views .vtab')].map((b) => b.textContent).join()]"), [1, 0, "Graph,Split,Source,Help"]);
+      assert.deepEqual(await page.eval("[document.querySelectorAll('header').length, document.querySelectorAll('iframe').length, [...document.querySelectorAll('.views .vtab')].map((b) => b.getAttribute('aria-label')).join()]"), [1, 0, "Graph,Side by side,Stacked,Source,Help"]);
       // the first window was narrow, so that page started with the text alone; the start is not kept, and a wide window starts with the graph beside the text
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).mode], ["", "source", "edit"]);
       await page.size(1400, 900);
       await page.eval("(window.__old = true, location.reload(), true)");
       await page.until(`!window.__old && ${DRAWN}`);
-      assert.deepEqual(await page.eval(LAYOUT), {tab: "split", split: "cols", ratio: "55%", graph: true, source: true, divider: true, on: 1, mode: "edit", editor: true, panel: false});
+      assert.deepEqual(await page.eval(LAYOUT), {tab: "cols", split: "cols", ratio: "55%", graph: true, source: true, divider: true, on: 1, mode: "edit", editor: true, panel: false});
       assert.equal(await page.eval("document.activeElement.id"), "src", "the page starts in the text");
       // a tab gives its view the whole page
       await page.eval(CLICK("vt-graph"));
@@ -2569,7 +2569,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.until(`Number(document.documentElement.dataset.renders) > ${renders}`);
       assert.equal(await page.eval("document.querySelector('.canvas').textContent.includes('by size') && document.querySelector('.canvas .node').getBoundingClientRect().width > 0"), true);
       assert.equal((await page.eval(LAYOUT)).tab, "graph", "a new text keeps the view");
-      await page.eval(CLICK("vt-split"));
+      await page.eval(CLICK("vt-cols"));
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).editor], ["cols", true, true]);
       // the divider: arrow keys, then a drag with the mouse
       await page.eval("(document.querySelector('.vdivide').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true})), true)");
@@ -2583,9 +2583,11 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       assert.equal((await page.eval(LAYOUT)).ratio, "50%", "the divider is under the pointer: 700 of 1400 px");
       await page.mouse("mouseMoved", 30, y);
       assert.equal((await page.eval(LAYOUT)).ratio, "50%", "a pointer that is not held does not move it");
-      // a second press on Split turns it: Graph above Source
-      await page.eval(CLICK("vt-split"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).on], ["rows", "split", 1]);
+      // a second press on a split tab keeps its split; the other split tab puts Graph above Source
+      await page.eval(CLICK("vt-cols"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).ratio], ["cols", "cols", "50%"]);
+      await page.eval(CLICK("vt-rows"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).on], ["rows", "rows", 1]);
       assert.equal(await page.eval("document.querySelector('#v-source').getBoundingClientRect().top >= document.querySelector('#v-graph').getBoundingClientRect().bottom"), true);
       // Read: the flow as the graph shows it, with its line numbers for comments; Edit: the editor again, with its text
       await page.eval(PRESS(".srcmode [data-mode=read]"));
@@ -2603,16 +2605,29 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.eval(CLICK("p-toggle"));
       assert.deepEqual(await page.eval("[document.getElementById('p-toggle').getAttribute('aria-expanded'), document.getElementById('problems').checkVisibility()]"), ["false", false]);
       await page.eval(CLICK("p-toggle"));
-      // Help is one more state of the same switch; from it, Source is the text alone, and Split comes back the way it was turned
+      // Help is one more state of the same switch; from it, Source is the text alone, and a split tab gives its split
       await page.eval(CLICK("vt-help"));
       assert.deepEqual([(await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).source, (await page.eval(LAYOUT)).divider], [false, false, false]);
       await page.eval(CLICK("vt-source"));
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["", false, "source"]);
-      await page.eval(CLICK("vt-split"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["rows", true, "split"]);
-      // the arrow keys move along the four tabs and never turn the split
-      await page.eval("(document.getElementById('vt-graph').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true})), true)");
-      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["rows", "vt-split"]);
+      await page.eval(CLICK("vt-rows"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["rows", true, "rows"]);
+      // the arrow keys move along the five tabs, and each split tab gives its own split
+      const ARROW = (id, key) => `(document.getElementById('${id}').dispatchEvent(new KeyboardEvent('keydown', {key: '${key}', bubbles: true})), true)`;
+      await page.eval(ARROW("vt-graph", "ArrowRight"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["cols", "vt-cols"]);
+      await page.eval(ARROW("vt-cols", "ArrowRight"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["rows", "vt-rows"]);
+      // a narrow window has no side-by-side tab: the arrow keys pass it, and the stacked tab is on for either split
+      await page.size(700, 900);
+      await page.eval(CLICK("vt-cols"));
+      assert.deepEqual([(await page.eval(LAYOUT)).tab, await page.eval("document.getElementById('vt-cols').getBoundingClientRect().width")], ["rows", 0]);
+      await page.eval(ARROW("vt-graph", "ArrowRight"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["rows", "vt-rows"]);
+      await page.eval(ARROW("vt-rows", "ArrowLeft"));
+      assert.equal(await page.eval("document.activeElement.id"), "vt-graph");
+      await page.size(1400, 900);
+      await page.eval(CLICK("vt-rows"));
       await page.eval(CLICK("vt-graph"));
       // another editor server has another port; the browser still knows this viewer's choices
       const second = await editor("ed-layout-2");
@@ -2621,8 +2636,9 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
         const next = await chrome.open(second.url, DRAWN);
         const kept = await next.eval(LAYOUT);
         assert.deepEqual([kept.tab, kept.split, kept.ratio, kept.panel], ["graph", "", "50%", true]);
-        await next.eval(CLICK("vt-split"));
-        assert.deepEqual([(await next.eval(LAYOUT)).split, (await next.eval(LAYOUT)).mode], ["rows", "edit"], "the way the split was turned is kept while one view is alone");
+        assert.deepEqual(await next.eval("document.getElementById('vt-rows').dataset.tip"), "Graph above Source", "a split tab has no text: its tip and its name say the split");
+        await next.eval(CLICK("vt-rows"));
+        assert.deepEqual([(await next.eval(LAYOUT)).split, (await next.eval(LAYOUT)).mode], ["rows", "edit"], "the last split is kept while one view is alone");
         assert.equal((await next.eval(EDITOR)).error, null);
       } finally { await second.close(); }
     } finally { await first.close(); }
@@ -2634,7 +2650,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     try {
       const page = await (await fresh()).open(address, DRAWN);
       await page.size(1400, 900);
-      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-split"));
+      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-cols"));
       await page.eval("(document.querySelector('.srcmode [data-mode=read]').click(), true)");
       const CARD = (name) => `[...document.querySelectorAll('.canvas .node')].find((n) => n.querySelector('.nm') && n.querySelector('.nm').textContent === '${name}')`;
       // graph to text: the clicked card's line is the marked line, and it is in view below the Read view's head
@@ -2668,7 +2684,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.eval(TYPE(EXAMPLE + Array.from({length: 120}, (_, index) => `step extra-${index} by=llm\n`).join("")));
       await page.until("document.documentElement.dataset.status === 'ok' && document.querySelectorAll('.canvas .node.k-step').length > 100");
       // print: the Source view beside the graph would lie over it
-      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-split"));
+      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-cols"));
       const SHOWN = "['#v-graph', '#v-source', '#sf-park', '.vdivide'].map((sel) => getComputedStyle(document.querySelector(sel)).display !== 'none')";
       assert.deepEqual(await page.eval(SHOWN), [true, true, true, true]);
       await page.media("print");
@@ -2695,7 +2711,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.until(`${LOOK}[1]`);
       assert.deepEqual(await page.eval(LOOK), ["edit", true, "switch", "none", "none", "1px"]);
       // beside the graph the head of Read mode and the editor's bar stay inside their view: no part is cut, and the view has no sideways scroll
-      await page.eval(CLICK("vt-split"));
+      await page.eval(CLICK("vt-cols"));
       const CUT = (bar) => `(() => { const edge = document.querySelector('${bar}').getBoundingClientRect().right + 1, view = document.getElementById('v-source');
         return [[...document.querySelectorAll('${bar} > *, ${bar} button')].filter((part) => part.getBoundingClientRect().width && part.getBoundingClientRect().right > edge).length, view.scrollWidth > view.clientWidth]; })()`;
       assert.deepEqual(await page.eval(CUT("#sfe-bar")), [0, false]);
@@ -2743,13 +2759,27 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       assert.deepEqual([await page.eval(LINE), await page.eval(PICKED)], ["step ", "name"], "the first field of the template is selected");
       // the fields are marked in the text: a frame on the one to fill, a dashed frame on each next one, and the count
       const FIELDS = "[document.querySelectorAll('#flds .fld.now').length, document.querySelectorAll('#flds .fld.next').length, document.querySelector('.fld-tip')?.textContent ?? null]";
-      assert.deepEqual(await page.eval(FIELDS), [1, 2, "1/3 · Tab: next"]);
-      // the browser's Undo takes the insert back, also after the page drew the new text; Redo brings it again
+      assert.deepEqual(await page.eval(FIELDS), [1, 2, "1/3 · Tab or Enter: next"]);
+      // the browser's Undo takes the insert back, also after the page drew the new text; Redo brings it again.
+      // Undo and Redo end the fields: the text they put back can have other places than the fields know
       await page.until("document.documentElement.dataset.status === 'ok' && document.querySelector('.canvas').textContent.includes('what the step does')");
       await page.command("undo");
       assert.equal((await page.eval(TEXT)).includes("step name"), false, "Undo");
       await page.command("redo");
       assert.equal((await page.eval(TEXT)).includes('step name by=llm "what the step does"'), true, "Redo");
+      assert.deepEqual(await page.eval(FIELDS), [0, 0, null], "Undo and Redo end the fields");
+      await page.command("undo");
+      await page.eval(KEY("Escape"));
+      await page.eval(KEY("Tab"));
+      assert.equal(await page.eval(PICKED), "name", "the word again: Tab completes it, and the fields are back");
+      // an Undo that keeps the length of the text ends the fields too
+      await page.eval(PUT("task"));
+      await page.command("undo");
+      assert.deepEqual([(await page.eval(TEXT)).includes("step name"), await page.eval(FIELDS)], [true, [0, 0, null]], "Undo at the same length ends the fields");
+      await page.command("undo");
+      await page.eval(KEY("Escape"));
+      await page.eval(KEY("Tab"));
+      assert.equal(await page.eval(PICKED), "name", "the word again, and the fields are back");
       await page.eval("(() => { const a = document.getElementById('src'), at = a.value.lastIndexOf('step name') + 5; a.setSelectionRange(at, at + 4); return true; })()");
       await page.eval(PUT("lint"));
       await page.eval(KEY("Tab"));
@@ -2761,16 +2791,56 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       // 5. inside a string the list never opens
       await page.eval(PUT("Run the li"));
       assert.equal(await page.eval(POP), null);
-      assert.deepEqual(await page.eval(FIELDS), [1, 0, "3/3"], "the last field: its frame grows with the text");
-      // 3. Tab right after a word completes it: one fit goes in at once
-      await page.eval(PRESS);
-      assert.deepEqual(await page.eval(FIELDS), [0, 0, null], "a press in the text ends the fields");
+      assert.deepEqual(await page.eval(FIELDS), [1, 2, "3/3 · Enter: done"], "the last field: its frame grows with the text");
+      // Shift+Tab and Tab go round the fields; a value field selects its value in the list, so Tab keeps it
+      await page.eval(KEY("Tab", {shiftKey: true}));
+      assert.deepEqual([await page.eval(PICKED), (await page.eval(POP)).on], ["code", "code"]);
+      await page.eval(KEY("Tab", {shiftKey: true}));
+      assert.equal(await page.eval(PICKED), "lint");
+      await page.eval(KEY("Tab", {shiftKey: true}));
+      assert.equal(await page.eval(PICKED), "Run the li", "Shift+Tab goes round from the first field to the last");
+      await page.eval(KEY("Tab"));
+      assert.equal(await page.eval(PICKED), "lint", "Tab goes round from the last field to the first");
+      // Enter in a field on one line goes to the next field; after the last field, to the end of its line: no line break in the string
+      await page.eval(KEY("Enter"));
+      assert.equal(await page.eval(PICKED), "code");
+      await page.eval(KEY("Tab"));
+      await page.eval(KEY("Enter"));
+      assert.deepEqual([await page.eval(LINE), await page.eval(PICKED), await page.eval(FIELDS)], ['step lint by=code "Run the li"', "", [0, 0, null]]);
+      assert.match(await page.eval(TEXT), /\nstep lint by=code "Run the li"$/);
+      // in a field on a line of its own, a block's body, Enter adds a line and Shift+Enter ends the field
+      await page.eval(PUT("\nph"));
+      await page.eval(KEY("Enter"));
+      assert.equal(await page.eval(PICKED), "name");
+      await page.eval(KEY("Enter"));
+      assert.deepEqual([await page.eval(LINE), await page.eval(FIELDS)], ["\t", [1, 1, "2/2 · Shift+Enter: done"]]);
+      await page.eval(KEY("Enter"));
+      assert.deepEqual([await page.eval(LINE), (await page.eval(FIELDS))[0]], ["\t", 1], "Enter adds a line in the body");
+      await page.eval(KEY("Enter", {shiftKey: true}));
+      assert.deepEqual([await page.eval(FIELDS), (await page.eval(TEXT)).endsWith("\nphase name {\n\t\n\t\n}")], [[0, 0, null], true]);
+      // a template with one field: Tab ends it, as Enter does, and the field keeps its text
       await page.eval("(() => { const a = document.getElementById('src'); a.setSelectionRange(a.value.length, a.value.length); return true; })()");
+      await page.eval(PUT("\nen"));
+      await page.eval(KEY("Enter"));
+      assert.equal(await page.eval(PICKED), "reason");
+      await page.eval(KEY("Tab"));
+      assert.deepEqual([await page.eval(LINE), await page.eval(FIELDS)], ['end "reason"', [0, 0, null]], "Tab in the one field goes to the end of its line");
+      // outside a template, Enter at the end of an open string closes it, and Enter before its closing quote steps over it
+      await page.eval("(() => { const a = document.getElementById('src'); a.setSelectionRange(a.value.length, a.value.length); return true; })()");
+      await page.eval(PUT('\nend "the run ends'));
+      await page.eval(KEY("Enter"));
+      await page.eval(PUT('end "x"'));
+      await page.eval("(() => { const a = document.getElementById('src'); a.setSelectionRange(a.value.length - 1, a.value.length - 1); return true; })()");
+      await page.eval(KEY("Enter"));
+      assert.match(await page.eval(TEXT), /\nend "the run ends"\nend "x"\n$/);
+      // 3. Tab right after a word completes it: one fit goes in at once
       await page.eval(PUT("\nga"));
       await page.eval(KEY("Escape"));
       await page.eval(KEY("Tab"));
       assert.match(await page.eval(TEXT), /\ngate name "question\?"$/, "the one fit goes in");
+      assert.deepEqual(await page.eval(FIELDS), [1, 1, "1/2 · Tab or Enter: next"]);
       await page.eval(PRESS);
+      assert.deepEqual(await page.eval(FIELDS), [0, 0, null], "a press in the text ends the fields");
       // no word before the cursor: Tab indents
       await page.eval("(() => { const a = document.getElementById('src'); a.setSelectionRange(a.value.length, a.value.length); return true; })()");
       await page.eval(PUT("\n"));

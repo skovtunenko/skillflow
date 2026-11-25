@@ -5,7 +5,7 @@ import { InputError, FAILURE, READ_LIMIT, W, cut, isFile, skillFiles, squash } f
 
 export { skillFiles };
 
-const LARGE_BYTES = 50_000;
+const LARGE_BYTES = 50_000; // bytes: `map` marks a larger file that is not Markdown [name and purpose only], so reverse does not read it in full
 const RULE_WORDS = new RegExp(`(?<![${W}])(never|only|before|until|unless|except|defer[${W}]*|do not|don't|unavailable|task list)(?![${W}])`, "iu");
 const WRITES = new RegExp(
   `\\.write_(text|bytes)\\(|(?<![${W}])open\\([^)]*['"][wax]b?\\+?['"]|\\.open\\(\\s*['"][wax]|\\.mkdir\\(|(?<![${W}])os\\.(makedirs|replace|rename|remove|unlink)\\(|\\.unlink\\(|\\.touch\\(|\\.save\\(|(?<![${W}])ZipFile\\([^)]*['"][wax]['"]|(?<![${W}])shutil\\.(copy[${W}]*|move|rmtree|make_archive|unpack_archive)\\(|(?<![${W}])(NamedTemporaryFile|mkstemp|mkdtemp)\\(|(?<![${W}])(writeFile|appendFile|mkdir|rm|rename|copyFile)(Sync)?\\(`,
@@ -47,13 +47,14 @@ function skillRoot(dir) {
 // The nearest enclosing branch line above lines[index], by indentation: the condition a failure or write sits under.
 export function condition(lines, index) {
   let indent = lstripLen(lines[index]);
+  // search at most 40 lines back: the enclosing branch of a usual block is nearer
   for (const line of lines.slice(Math.max(0, index - 40), index).reverse()) {
     const text = line.trim();
     if (!text || text.startsWith("#")) continue;
     const level = lstripLen(line);
     if (level < indent) {
       if (text.includes("__name__")) return "";
-      if (BRANCH.test(text)) return cut(squash(text), 120);
+      if (BRANCH.test(text)) return cut(squash(text), 120); // 120 characters show the condition; the file has the rest above the reported line
       if (text.startsWith("def ") || text.startsWith("function ") || text.startsWith("async def ") || level === 0) return "";
       indent = level;
     }
@@ -86,6 +87,7 @@ export function runRules(args) {
       if (rule) counts.rule++;
       if (failure) counts.failure++;
       if (write) counts.write++;
+      // 240 characters keep a long rule sentence whole and cut a minified line
       let out = `${relative}:${i + 1}: ${cut(squash(line), 240)}`;
       if (!rule) {
         const when = condition(lines, i);

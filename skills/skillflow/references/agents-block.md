@@ -1,13 +1,14 @@
 # Block for the repository's agent instructions
 
 Offer this block once, when a repository's `AGENTS.md` or `CLAUDE.md` has no
-SkillFlow block. Fill the location from the user's answer, show the block,
-and write it only after the user agrees. Edit the shared target once when
-`CLAUDE.md` is a symlink to `AGENTS.md`.
+SkillFlow block:
 
-Ask in the same message where flow files live: next to `SKILL.md` (default),
-in a subfolder (which one), or in a separate tree that mirrors the skill paths
-(which root)?
+1. Offer the block, and ask in the same message where flow files live: next
+   to `SKILL.md` (default), in a subfolder (which one), or in a separate tree
+   that mirrors the skill paths (which root).
+2. Fill the location from the user's answer and show the block.
+3. Write the block only after the user agrees. When `CLAUDE.md` is a symlink
+   to `AGENTS.md`, edit the shared target once.
 
 ```markdown
 ## SkillFlow

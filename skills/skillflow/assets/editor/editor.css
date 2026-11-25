@@ -138,7 +138,7 @@ html[data-status=draft] #st-main{color:var(--todo);background:color-mix(in srgb,
 .fld.now{outline:1.5px solid var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
 .fld.in{animation:sfeField .45s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes sfeField{from{transform:scale(1.25,1.6);opacity:0}}
-.fld-tip{position:absolute;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 var(--fs-11_5)/18px var(--sans);white-space:nowrap}
+.fld-tip{position:absolute;padding:0 6px;border-radius:999px;background:var(--accent-fill);color:var(--accent-ink);font:600 var(--fs-11_5)/18px var(--sans);white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.fld.in{animation:none}}
 #pop li{display:flex;gap:10px;align-items:baseline;min-height:26px;padding:3px 8px;border-radius:5px;cursor:pointer}
 #pop li b{font-weight:600;white-space:nowrap}#pop li span{font:var(--fs-12)/1.4 var(--sans);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

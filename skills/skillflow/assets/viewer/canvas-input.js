@@ -4,10 +4,12 @@
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     var r = viewport.getBoundingClientRect();
+    // 0.0025 per unit of deltaY: a wheel step of 100 zooms by about a quarter, and the small deltas of a trackpad pinch zoom in fine steps
     zoomAt(state.scale * Math.exp(-e.deltaY * 0.0025), e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
   viewport.addEventListener('keydown', function (e) {
     if (e.target.closest('button')) return;
+    // zoom step 1.2 per press: four presses about double the scale, about 13 go from MIN_SCALE to MAX_SCALE; the zoom buttons in shell.js use the same step
     if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomCenter(state.scale * 1.2); }
     else if (e.key === '-') { e.preventDefault(); zoomCenter(state.scale / 1.2); }
     else if (e.key === '0') { e.preventDefault(); fit(); }
@@ -65,6 +67,7 @@
     var dx = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0, dy = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
     if (dx || dy) {
       e.preventDefault(); state.moved = true;
+      // an arrow moves 64 px, a small step that keeps the reader's place; Shift moves 80 % of the view, so a strip of the last view stays in sight
       viewport.scrollBy({ left: dx * (e.shiftKey ? viewport.clientWidth * 0.8 : 64), top: dy * (e.shiftKey ? viewport.clientHeight * 0.8 : 64) });
     } else if (e.key === 'Home') {
       e.preventDefault(); state.moved = true;

@@ -333,6 +333,7 @@
     sec('tools', 'Tools', 'tool', Object.keys(M.tools), function (name) {
       return item(toolKind(name), name, 'used by ' + plural(M.tools[name].length, 'card'), function () { go({ kind: 'tool', key: name }); }, 'tool:' + name);
     }, false);
+    // Unclear starts open only for a short list: up to 5 notes show without pushing the sections below far down
     sec('unclear', 'Unclear', 'ask', M.unclear, function (u) {
       return u.node ? item('ask', title(byId[u.node]), plain(u.text), function () { reveal(u.node); go({ kind: 'node', id: u.node }); }) : item('ask', plain(u.text), null, null, null, true);
     }, M.unclear.length > 0 && M.unclear.length <= 5);

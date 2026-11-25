@@ -1,7 +1,7 @@
 <div class="help-in">
 <nav class="help-toc" aria-label="Help sections"><div class="toc-in"><a href="#h-lang">1 · Syntax</a><a href="#h-nodes">2 · Nodes</a><a href="#h-example">3 · Example</a><a href="#h-best">4 · Best practices</a><a href="#h-editor">5 · Editor</a></div></nav>
 
-<p class="lead">A <b>flow file</b> (<code>flow.kdl</code>) describes one skill's workflow so that a person can review it in minutes. Its nodes are the <b>skeleton</b>: phases, steps, decisions, who acts, data, invariants and exits. Its quoted strings are <b>prose</b>: the intent of each node.</p>
+<p class="lead">A <b>flow file</b> (<code>&lt;skill&gt;.kdl</code>) describes one skill's workflow so that a person can review it in minutes. Its nodes are the <b>skeleton</b>: phases, steps, decisions, who acts, data, invariants and exits. Its quoted strings are <b>prose</b>: the intent of each node.</p>
 
 <h2 id="h-lang">1 · Syntax: KDL 2.0.0</h2>
 <p>A flow file is a <a href="https://kdl.dev/spec/" rel="noreferrer">KDL 2.0.0</a> document, not KDL v1, YAML or JSON.</p>
@@ -153,7 +153,9 @@ node skillflow.mjs validate flow.kdl</pre></div>
 <li><b>A change on disk.</b> When another program changes the file while the text has unsaved edits, Save shows both versions and writes only the one you choose.</li>
 <li><b>No connection.</b> When the editor server does not answer, the text stays in the page and the editor connects again by itself. Until then, Save writes to a file that you pick, or downloads a copy. A download is not linked to the editor, so the text still counts as unsaved.</li>
 <li><b>History.</b> The bar keeps the edits of this visit until the tab closes. A new edit at an earlier point replaces the later ones; Undo brings the text back.</li>
-<li><b>Keys.</b> Escape, then Tab, leaves the text field.</li>
+<li><b>Fields.</b> A suggestion can put in a template with fields, and a frame marks the field to fill. Tab goes to the next field and Shift+Tab to the one before; a template with one field ends on Tab or Shift+Tab, as on Enter. Enter ends a field on one line, such as a <code>"…"</code> string, and goes to the next field; after the last field, the cursor goes to the end of the line. In a field on a line of its own, Enter adds a line and Shift+Enter ends the field. Escape ends the fields.</li>
+<li><b>Views.</b> The tabs show the graph alone, the graph and the text side by side or one above the other, or the text alone.</li>
+<li><b>Keys.</b> Escape, then Tab, leaves the text field. Ctrl+Enter or ⌘Enter checks the text and draws the graph again.</li>
 </ul>
 
 <footer class="credits" id="h-credits">

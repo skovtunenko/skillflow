@@ -21,12 +21,14 @@
     clearTimeout(tipTimer);
     if (!tipFor) return;
     if (tipSaid.getAttribute('aria-describedby') === tipEl.id) tipSaid.removeAttribute('aria-describedby');
+    // for 400 ms after a tip goes, the next tip shows without the 450 ms wait, so moving along the toolbar does not wait again
     tipFor = null; tipWarm = Date.now() + 400; tipEl.hidePopover();
   }
   // the control whose tip is wanted, null for none. A shown tip waits a moment before it goes, so the pointer can cross onto it (WCAG 1.4.13)
   function aimTip(t, now) {
     if (t === tipAim) return;
     tipAim = t; clearTimeout(tipTimer);
+    // 120 ms keeps a shown tip while the pointer crosses onto it; 450 ms keeps a pointer that only passes over a control from opening its tip; focus shows it at once
     tipTimer = setTimeout(function () { hideTip(); if (t) showTip(t); }, now ? 0 : tipFor ? 120 : t && Date.now() > tipWarm ? 450 : 0);
   }
   function tipOf(e) { return tipEl.contains(e.target) ? tipFor : e.target.closest('[data-tip],button[aria-label]'); }
@@ -44,12 +46,13 @@
   // the Scenario summary is rebuilt on each pick, so a persistent status node announces the new run
   var scnLive = el('div', 'vh'); scnLive.setAttribute('role', 'status'); onBody(scnLive);
   // action: [label, function], one button such as Undo; the toast then stays until it is dismissed or the next toast replaces it (WCAG 2.2.1)
-  var toastMs = 4000;
+  var toastMs = 4000;  // the plain toast time; toast() sets it again for each toast
   function toast(text, bad, action) {
     keepFocus();
     toastEl.replaceChildren(glyph(bad ? 'fail' : 'check'), el('span', null, text));
     if (action) toastEl.append(button('tbtn', action[0], function () { hideToast(); action[1](); }), button('tbtn', glyph('close'), hideToast, 'Dismiss'));
     toastEl.classList.toggle('bad', !!bad); toastEl.classList.add('on');
+    // 4 s is time to read a short note; an error stays twice as long, as the reader must take in what went wrong; 0: a toast with an action stays
     toastMs = action ? 0 : bad ? 8000 : 4000; armToast();
   }
   function armToast() { clearTimeout(toastTimer); if (toastMs) toastTimer = setTimeout(hideToast, toastMs); }

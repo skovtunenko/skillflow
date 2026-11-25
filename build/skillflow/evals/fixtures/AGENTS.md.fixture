@@ -1,0 +1,5 @@
+# Repo rules
+
+Skills live in `skills/<skill-name>/`.
+
+- Raise `metadata.version` in `SKILL.md` in every change to a skill's files.

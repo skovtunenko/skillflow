@@ -6,6 +6,17 @@ node names, and commands as written here. Answer the question asked: give the
 overview for a general question, the lesson for "how do I write one", and the
 error table for a validator message.
 
+## Contents
+
+- [What it is](#what-it-is)
+- [Modes and phrases](#modes-and-phrases)
+- [Run it yourself](#run-it-yourself): `skillflowctl` for a person, and the browser editor
+- [Script commands](#script-commands): what each command and the rendered page do
+- [Lesson: write your first flow](#lesson-write-your-first-flow)
+- [Patterns](#patterns)
+- [What goes into the skeleton](#what-goes-into-the-skeleton)
+- [Common validator messages](#common-validator-messages)
+
 ## What it is
 
 SkillFlow keeps one flow file (`<skill>.kdl`) per skill: a short, checkable description of the
@@ -16,14 +27,14 @@ The flow file is the specification; the skill implements it.
 
 | Say | SkillFlow does | You get |
 | --- | --- | --- |
-| `skillflow reverse` | reads an existing skill and writes its flow as it works now | `flow.kdl`, a list of unclear places, improvement ideas |
-| `skillflow author` | drafts or edits a flow with you from documents and answers | `flow.kdl` you accepted |
+| `skillflow reverse` | reads an existing skill and writes its flow as it works now | the flow file, a list of unclear places, improvement ideas |
+| `skillflow author` | drafts or edits a flow with you from documents and answers | the flow file you accepted |
 | `skillflow check` | compares the flow with the skill; changes nothing | ✅ / ❌ / ❓ report with evidence |
 | `skillflow sync` | applies check results; asks which side wins per item | edits to the flow file or the skill |
 | `skillflow explain` | explains the flow; renders it as a page; compares versions | explanation, HTML page, semantic diff |
 | `skillflow help` | this page | — |
 
-After an agent changes a skill that has a `flow.kdl`, it runs check on its own
+After an agent changes a skill that has a flow file, it runs check on its own
 and offers sync.
 
 ## Run it yourself
@@ -45,7 +56,8 @@ file is a `.kdl` file whose first line starts with `skillflow`; its file name
 is free. For a name, the script searches from the git root the files that git
 does not ignore, and finds the skill folder with the same name. When a name
 matches two flows, it lists them: pass one path. The menu shows each flow
-with its status and remembers the last choice; Enter takes it. An unknown
+with its status and remembers the last choice; Enter takes it. To quit the
+menu, type `q` or press Ctrl+C or Ctrl+D. An unknown
 command gets the nearest command name. On "permission denied", run
 `sh <skillflow-dir>/skillflowctl`. On Windows, run `skillflowctl.cmd` from the same
 folder with the same commands.
@@ -135,11 +147,11 @@ outside the skill folder, because it holds a copy of the skill's files.
 ## Script commands
 
 ```bash
-node <skillflow-dir>/scripts/skillflow.mjs validate <flow.kdl> [--skill <skill-dir>] [--draft]
-node <skillflow-dir>/scripts/skillflow.mjs render <flow.kdl> [-o <page.html>] [--skill <skill-dir>] [--draft]
+node <skillflow-dir>/scripts/skillflow.mjs validate <flow.kdl> [--skill <target-skill-dir>] [--draft]
+node <skillflow-dir>/scripts/skillflow.mjs render <flow.kdl> [-o <page.html>] [--skill <target-skill-dir>] [--draft]
 node <skillflow-dir>/scripts/skillflow.mjs fmt <flow.kdl> [--check]
-node <skillflow-dir>/scripts/skillflow.mjs map <skill-dir>
-node <skillflow-dir>/scripts/skillflow.mjs rules <skill-dir>
+node <skillflow-dir>/scripts/skillflow.mjs map <target-skill-dir>
+node <skillflow-dir>/scripts/skillflow.mjs rules <target-skill-dir>
 ```
 
 `node <skillflow-dir>/scripts/skillflow.mjs --help` lists the commands, flags,
@@ -364,7 +376,8 @@ Then render the page and read it as a reviewer would.
 
 A fact becomes a node only when a reviewer or the skill's user would notice
 its change in the result or in the dialogue. Loops and retries stay in prose.
-Keep each node's prose to three lines of intent.
+Keep each node's prose to its intent: one sentence, two at most (200
+characters), or one list of at most five items.
 
 ## Common validator messages
 

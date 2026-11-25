@@ -3,7 +3,7 @@
 const KEY = "skillflow-editor", VIEWS = ["graph", "source"], SPLITS = ["one", "cols", "rows"], MODES = ["edit", "read"];
 
 /** The graph's share of the page in percent, kept inside 20–80 so neither side closes. */
-export const clampRatio = (percent) => Math.min(80, Math.max(20, Math.round(Number(percent)) || 55));
+export const clampRatio = (percent) => Math.min(80, Math.max(20, Math.round(Number(percent)) || 55)); // 55: the default share, a little more than half for the graph, as in viewer/model.js
 
 /** `name=value` of the choices, for a cookie or for readPrefs. */
 export const prefsPair = ({view, split, ratio, srcMode, panelShut, dir}) => `${KEY}=${view}.${split || "one"}.${clampRatio(ratio)}.${srcMode}.${panelShut ? "shut" : "open"}.${split || dir || "cols"}`;
@@ -14,6 +14,7 @@ export const prefsPair = ({view, split, ratio, srcMode, panelShut, dir}) => `${K
  */
 export function readPrefs(saved, narrow = false) {
   const [view, split, ratio, mode, panel, dir] = new RegExp(`(?:^|;\\s*)${KEY}=([^;]*)`).exec(saved ?? "")?.[1].split(".") ?? [];
+  // ratio 55: the default share, a little more than half for the graph, as in viewer/model.js
   if (!VIEWS.includes(view) || !SPLITS.includes(split) || !MODES.includes(mode)) return {view: "source", split: narrow ? "" : "cols", ratio: 55, srcMode: "edit", panelShut: true, dir: "cols"};
   // a pair of an earlier version has no turn: the split it names, else side by side
   return {view, split: split === "one" ? "" : split, ratio: clampRatio(ratio), srcMode: mode, panelShut: panel !== "open", dir: split !== "one" ? split : dir === "rows" ? "rows" : "cols"};

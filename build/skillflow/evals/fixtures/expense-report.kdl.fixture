@@ -1,0 +1,58 @@
+skillflow 1.0 skill-version="1.4" skillflow-version="2026.11.25.1"
+
+context "Builds a monthly expense report from a folder of receipt files." {
+	input folder "the folder that holds the receipt files"
+	input month "the month of the report"
+
+	output report "report.md in the receipts folder"
+	output "a one-line summary in the chat"
+
+	invariant by=human "report.md is not written before the user approves the table"
+	invariant by=code "scripts/scan.sh stops the flow when the folder has no receipts for the month"
+	invariant by=llm "no receipt file is changed or moved"
+}
+
+phase scan ref="S1" {
+	step scan-receipts by=code file="scripts/scan.sh" {
+		output receipts "the file, date, amount, and currency of each receipt"
+
+		on-fail {
+			end "tell the user that the folder has no receipts"
+		}
+	}
+}
+
+phase categorize ref="S2" {
+	// ? The skill does not say whether the flow continues after it reports a receipt with no amount (SKILL.md:30).
+	step assign-categories by=llm "Give each receipt one category by the match words in references/categories.md. Report a receipt that has no amount." {
+		output categories "the category of each receipt"
+	}
+
+	decide foreign-currency "Is any receipt in a foreign currency?" by=llm {
+		when yes {
+			step ask-rate by=llm "Ask the user for the exchange rate of each foreign currency." {
+				input rate "the exchange rate of each foreign currency"
+			}
+		}
+	}
+}
+
+phase review ref="S3" {
+	step show-table by=llm "Show the receipts with their categories and the total of each category." {
+		output table "the receipts by category with totals"
+	}
+
+	gate approved "Did the user approve the table?" "Apply the user's corrections and show the table again." {
+		when rejected {
+			end "the user does not want a report"
+		}
+	}
+}
+
+phase write ref="S4" {
+	step write-report by=code file="scripts/write-report.sh" {
+		output report
+	}
+
+	step summarize by=llm "Tell the user the path of the report and the grand total in one line."
+}
