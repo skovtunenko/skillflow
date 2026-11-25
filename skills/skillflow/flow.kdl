@@ -1,4 +1,4 @@
-skillflow 1.0 skill-version="2026.11.24.2" skillflow-version="2026.11.24.2"
+skillflow 1.0 skill-version="2026.11.25.5" skillflow-version="2026.11.25.5"
 
 context {
 	input request "what the user asks for, possibly naming a mode"

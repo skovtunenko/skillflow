@@ -7,6 +7,13 @@ requirements, and nuances that you compare with the skill by reading.
 [authoring.md](authoring.md) gives the intent test and the rules for writing
 a flow.
 
+## Contents
+
+- [Nodes](#nodes): each node, where it is allowed, and its properties
+- [Rules](#rules): rules 1 to 15
+- [Layout](#layout): what `fmt` writes
+- [KDL v2 primer](#kdl-v2-primer)
+
 ## Nodes
 
 | Node | Allowed in | Form | Meaning |

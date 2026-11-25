@@ -17,7 +17,7 @@
     else if (d && !stored) { state = 'err'; long = 'Not kept: press ' + saveAction; short = 'Not kept'; }
     else if (d) { state = 'warn'; long = savedAt ? 'Unsaved since ' + hhmm(savedAt) : 'Not saved to a file yet'; short = 'Unsaved'; }
     else if (savedAt) { state = 'ok'; long = (downloaded ? 'Downloaded ' : 'Saved ') + hhmm(savedAt); short = hhmm(savedAt); }
-    else { state = 'none'; long = host ? 'Review page not saved yet' : 'Not saved to a file yet'; short = host ? 'Page not saved' : 'Not saved'; }
+    else { state = 'none'; long = host ? 'Review page not exported yet' : 'Not saved to a file yet'; short = host ? 'Not exported' : 'Not saved'; }
     sstat.dataset.state = state;
     sstat.replaceChildren(el('i', 'sdot'), el('span', 'full', long), el('span', 'short', short));
     var tip = downloaded && !d ? 'The browser downloaded the page; check that the file is in your downloads.' : saveHandle ? 'Autosave keeps ' + saveHandle.name + ' current while this tab is open.' : d && savedAt ? 'Press ' + saveAction + ' to save again and resume autosave.' : '';
@@ -77,6 +77,7 @@
     try {
       var url = URL.createObjectURL(new Blob([html], { type: 'text/html' })), a = el('a');
       a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      // revoke later, not at once: click() only starts the download, which still reads the URL; 1 s leaves room for that and frees the page soon after
       setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
       ok = true;
     } catch (e) { ok = false; }

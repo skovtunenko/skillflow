@@ -276,6 +276,7 @@ function quote(text, match) {
   if (!match) return null;
   const from = text.lastIndexOf("\n", match.index - 1) + 1, stop = text.indexOf("\n", match.index + match[0].length);
   const flat = (part) => part.replace(/\s+/g, " ");
+  // the quote is one short line of the data panel: about 40 characters before the word and 50 after it
   let before = flat(text.slice(from, match.index)).replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "").trimStart();
   let after = flat(text.slice(match.index + match[0].length, stop < 0 ? text.length : stop)).trimEnd();
   if (before.length > 40) before = "…" + before.slice(-39).replace(/^\S*\s/, "");

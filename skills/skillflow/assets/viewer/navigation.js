@@ -64,7 +64,7 @@
     go({ kind: 'station', key: i }, true);
     frameStation(i, false);
     // the picked stop is current at once; the line does not run through the stops the graph passes on its way
-    setHere(i); spyHold = Date.now() + 900;
+    setHere(i); spyHold = Date.now() + 900;  // 900 ms: the scroll spy waits out the smooth scroll to the stop
   }
   // the stop under the upper third of the canvas is where the reader is: its dot fills, the line up to it turns accent
   var hereIx = -1, spyQueued = false, spyHold = 0;

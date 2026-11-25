@@ -236,6 +236,7 @@
     selBtn.style.top = end.bottom - box.top + 4 + 'px';
     selBtn.style.left = Math.max(8, Math.min(end.right - box.left + 8, box.width - selBtn.offsetWidth - 8)) + 'px';
   }
+  // 120 ms: the comment button moves once the selection rests, not on each selectionchange while a drag extends it
   function selLater() { clearTimeout(selTimer); selTimer = setTimeout(paintSel, 120); }
   listen(document, 'mousedown', function () { selDown = true; });
   listen(document, 'mouseup', function () { selDown = false; selLater(); });

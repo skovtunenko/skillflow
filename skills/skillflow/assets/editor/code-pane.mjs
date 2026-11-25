@@ -1,7 +1,7 @@
 // The text side: a transparent textarea over a highlighted copy of its text, with line numbers, a mark at each problem line,
 // and a ruler that shows where the problem lines are in the whole text. It keeps the indent on Enter and on `}`, shows spaces and tabs
 // on request, and has the list of what fits at the cursor (suggest.mjs).
-import {closesBlock, newLine} from "./complete.mjs";
+import {closesBlock, newLine, openQuote} from "./complete.mjs";
 import {escapeHtml, htmlLines} from "./highlight.mjs";
 import {suggester} from "./suggest.mjs";
 import {differingLines} from "./sync.mjs";
@@ -70,7 +70,7 @@ export function codePane(tokenize, {onInput, onLine, grammar, auto}) {
       area.setSelectionRange(at, at);
       area.scrollTop = top;
     }
-    paint(); onInput(event); if (!state.loading) aid.input();
+    paint(); onInput(event); if (!state.loading) aid.input(event);
   });
   // `}` on a line of its own takes one level back; beforeinput also sees a phone keyboard, which sends no key name
   area.addEventListener("beforeinput", (event) => {
@@ -83,13 +83,21 @@ export function codePane(tokenize, {onInput, onLine, grammar, auto}) {
   area.addEventListener("keydown", (event) => {
     // after Escape the next Tab moves the focus, so the keyboard can leave the field; an Escape that closes the list does not count
     const leaving = state.leaving && event.key === "Tab";
-    state.leaving = event.key === "Escape" && !aid.open;
-    if (leaving || aid.key(event) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.isComposing) return;
+    state.leaving = event.key === "Escape" && !aid.open && !aid.filling;
+    // an IME's Enter ends its composition: no key of the editor runs then
+    if (event.isComposing || leaving || aid.key(event) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
     const before = area.value.slice(0, area.selectionStart);
     // Enter keeps the indent of its line, and adds a level after `{`; Tab indents, as fmt writes it
-    const text = event.key === "Enter" ? newLine(before.slice(before.lastIndexOf("\n") + 1)) : event.key === "Tab" ? "\t" : null;
+    let text = event.key === "Enter" ? newLine(before.slice(before.lastIndexOf("\n") + 1)) : event.key === "Tab" ? "\t" : null;
     if (text === null) return;
     event.preventDefault();
+    // a one-line string cannot hold a line break: Enter at its end closes it first, or steps over its closing quote
+    const quote = event.key === "Enter" && area.selectionStart === area.selectionEnd && openQuote(before, tokenize);
+    if (quote) {
+      const line = area.value.indexOf("\n", area.selectionStart), end = line < 0 ? area.value.length : line, rest = area.value.slice(area.selectionStart, end).trim();
+      if (!rest) text = quote + text;
+      else if (rest === quote) area.setSelectionRange(end, end);
+    }
     insert(text);
   });
   document.addEventListener("selectionchange", () => {

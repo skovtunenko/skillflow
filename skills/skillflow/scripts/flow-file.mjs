@@ -4,6 +4,7 @@ import {basename, dirname, join, resolve} from "node:path";
 import {statOrNull} from "./validate.mjs";
 
 // realpath of a file that may not exist yet: a dangling symlink resolves to its target, else the folder's realpath plus the name
+// 40 links at most, so a loop of links ends
 export function real(path, depth = 0) {
   try { return realpathSync(path); } catch {}
   if (depth < 40) try { return real(resolve(dirname(path), readlinkSync(path)), depth + 1); } catch {}

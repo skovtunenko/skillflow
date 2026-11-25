@@ -258,6 +258,7 @@
     if (mode === 'extra') {
       // the other copies keep their own slots, so deciding later loses nothing
       var list = el('ul', 'xlist');
+      // the first 4 comments show and the rest are counted: this bounds the number of previewed comments
       extra.slice(0, 4).forEach(function (c) { list.appendChild(add(el('li'), el('span', 'cpl', commentPlace(c)), commentView(c))); });
       if (extra.length > 4) list.appendChild(el('li', 'desc', '+' + (extra.length - 4) + ' more'));
       var addBtn = button('btn primary', [glyph('plus'), 'Add to this page'], function () {

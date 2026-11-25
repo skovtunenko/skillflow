@@ -26,7 +26,12 @@ const KEYS = {
 const BY = {llm: "the model acts", code: "a script acts", human: "the person acts"};
 const NAMED = new Set(["skillflow", "phase", "step", "decide", "gate", "when", "input"]); // the first argument is a name that the author makes
 const WORD = /[^\s{}()\[\];="\\\/]*$/; // the same word characters as the tokenizer
-const closed = (text) => { const open = /^(#*)("""|")/.exec(text), end = open[2] + open[1]; return text.length >= open[0].length + end.length && text.endsWith(end); };
+const closed = (text) => {
+  const open = /^(#*)("""|")/.exec(text), end = open[2] + open[1];
+  if (text.length < open[0].length + end.length || !text.endsWith(end)) return false;
+  // in a plain string a `\` escapes the quote: an odd count of them before the last quote leaves the string open
+  return Boolean(open[1]) || open[2] !== '"' || /(^|[^\\])(\\\\)*"$/.test(text.slice(1));
+};
 
 /**
  * Where the cursor is: {path, parent, node, kind, key, word, keys, argv, by, from}. `kind` is the place: node (a line's first word), prop, value
@@ -118,6 +123,15 @@ export function expand(template, indent) {
 
 /** The text that Enter puts in after `line`, the text of the cursor's line before the cursor: the line's indent, and one level more after `{`. */
 export const newLine = (line) => "\n" + /^[\t ]*/.exec(line)[0] + (/\{\s*$/.test(line) ? "\t" : "");
+
+/**
+ * The quote that closes a one-line string open at the end of `before`, the text before the cursor: `"`, or `"#` for a raw string;
+ * "" when no string is open there, or the open one is a `"""` string, which may hold line breaks.
+ */
+export function openQuote(before, tokenize) {
+  const last = tokenize(before).at(-1), open = last && /^(#*)("""|")/.exec(last.text);
+  return open && open[2] === '"' && !closed(last.text) && !last.text.includes("\n") ? '"' + open[1] : "";
+}
 
 /** True when a `}` typed after `before`, the text before the cursor, closes a block on a line of its own: it then takes one level back. */
 export const closesBlock = (before) => /(^|\n)[\t ]*\t$/.test(before);

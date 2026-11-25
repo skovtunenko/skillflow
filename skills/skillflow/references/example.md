@@ -1,11 +1,18 @@
 # Example flow file
 
-A complete `flow.kdl` for an imagined skill `release-notes`, which drafts release
+A complete flow file for an imagined skill `release-notes`, which drafts release
 notes for a git tag and adds them to `CHANGELOG.md`. It uses every node, every
 property, every executor and every tool kind of [grammar.md](grammar.md). The
 validator accepts it without a warning when the skill folder has
 `scripts/collect.sh`, the version `1.2` in `SKILL.md`, and a heading that
 starts with `S2`.
+
+## Contents
+
+- [The flow file](#the-flow-file)
+- [How to read it](#how-to-read-it)
+
+## The flow file
 
 ```kdl
 skillflow 1.0 skill-version="1.2" skillflow-version="2026.11.20.1"
@@ -84,7 +91,7 @@ phase write ref="S2" {
 }
 ```
 
-How to read it:
+## How to read it
 
 - The first line carries the stamps that reverse and sync write:
   `skill-version` and `skillflow-version`. A flow file that is not next to its

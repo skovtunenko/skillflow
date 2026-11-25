@@ -6,7 +6,7 @@ import path from "node:path";
 import {test} from "node:test";
 import vm from "node:vm";
 import {SKILL, skillUrl} from "./skill-path.mjs";
-const {candidates, closesBlock, context, expand, newLine, rank, toolNames} = await import(skillUrl("assets/editor/complete.mjs"));
+const {candidates, closesBlock, context, expand, newLine, openQuote, rank, toolNames} = await import(skillUrl("assets/editor/complete.mjs"));
 const diff = await import(skillUrl("assets/editor/graph-diff.mjs"));
 const {escapeHtml, htmlLines} = await import(skillUrl("assets/editor/highlight.mjs"));
 const {atLast, goTo, LIMIT, noEdits, PAUSE, record} = await import(skillUrl("assets/editor/history.mjs"));
@@ -243,6 +243,9 @@ test("rank puts a start match first and keeps letters in order; expand gives a t
 
 test("Enter keeps the indent of its line and adds a level after a brace; a closing brace on a line of its own takes one back", () => {
   assert.deepEqual([newLine("\t\tstep a by=llm"), newLine("\twhen yes {"), newLine("phase p {  "), newLine(""), newLine("    step a")], ["\n\t\t", "\n\t\t", "\n\t", "\n", "\n    "]);
+  // Enter in a one-line string closes it first: the quote that closes it, none for a closed, a multi-line, or a commented string
+  assert.deepEqual(["step a \"do it", "step a file=\"x", "step a #\"raw", "step a \"done\"", "step a \"\"\"", "step a // \"no", "step a \"broken\n", "step a \"say \\\"", "step a \"dir\\\\\""].map((before) => openQuote(before, tokenize)),
+    ["\"", "\"", "\"#", "", "", "", "", "\"", ""]);
   assert.deepEqual([closesBlock("when yes {\n\t\t"), closesBlock("\t"), closesBlock("step a\t"), closesBlock("when yes {\n"), closesBlock("\t  ")], [true, true, false, false, false]);
 });
 

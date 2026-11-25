@@ -1,0 +1,47 @@
+---
+name: expense-report
+description: Builds a monthly expense report from a folder of receipt files. Use when the user asks for an expense report or names a receipts folder.
+metadata:
+  version: "1.4"
+---
+
+# Expense report
+
+The user gives the receipts folder and the month. The result is `report.md`
+in the receipts folder.
+
+## Rules
+
+- Never write `report.md` before the user approves the table.
+- Never change or move a receipt file.
+- Never go on without receipts: `scripts/scan.sh` stops the run when the
+  folder has none for the month.
+- Amounts in the report have two decimals and the currency code.
+
+## S1 — Scan the receipts
+
+Run `scripts/scan.sh <folder> <month>`. It prints one line per receipt: file,
+date, amount, currency. When the folder has no receipts for the month, the
+script exits 1: tell the user that the folder has no receipts and stop.
+
+## S2 — Categorize
+
+Give each receipt one category: travel, meals, office, or other. The match
+words are in [categories.md](references/categories.md). Report a receipt
+that has no amount.
+
+When any receipt is in a foreign currency, ask the user for the exchange rate
+of each foreign currency.
+
+## S3 — Review
+
+Show the receipts with their categories and the total of each category. Ask
+the user to approve the table. Apply the corrections that the user gives and
+show the table again. When the user does not want a report, stop.
+
+## S4 — Write the report
+
+Run `scripts/write-report.sh <folder>` with the approved table on standard
+input. It writes `report.md` in the receipts folder.
+
+Then tell the user the path of the report and the grand total in one line.

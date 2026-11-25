@@ -1,13 +1,13 @@
 ---
 name: skillflow
-description: Use when the user says "skillflow", "skillflow help", "skillflow reverse", "skillflow author", "skillflow check", "skillflow sync", or "skillflow explain", or when you change a skill whose folder has a flow file (flow.kdl or <skill>.kdl).
+description: Describes a skill's workflow as a KDL flow file, checks and syncs the skill against it, and renders it as an HTML page. Use when the user says "skillflow", "skillflow help", "skillflow reverse", "skillflow author", "skillflow check", "skillflow sync", or "skillflow explain", or after a change to a skill whose folder has a flow file (flow.kdl or a .kdl file named after the skill).
 metadata:
-  version: "2026.11.24.2"
+  version: "2026.11.25.5"
 ---
 
 # SkillFlow
 
-A **flow file** (`<skill-name>.kdl`, written in the KDL 2.0.0 document language, not
+A **flow file** (`<skill>.kdl`, written in the KDL 2.0.0 document language, not
 KDL v1) describes one target skill's high-level workflow so a person can
 review it in minutes. Its nodes are the **skeleton**:
 phases, steps, decisions, who acts (`llm`, `code`, `human`), data, invariants,
@@ -19,33 +19,37 @@ cannot make.
 Before reverse, author, check, or sync, read [grammar.md](references/grammar.md)
 (constructs and KDL v2 primer) and [authoring.md](references/authoring.md)
 (the intent test and writing rules). `help` and `explain` do not need them.
+[example.md](references/example.md) is one complete flow file that uses every
+construct: read it when the form of a construct is unclear.
 
 ## Script
 
-`<skill-dir>` is the folder of this `SKILL.md` (requires Node.js 22+, no packages, no network):
+Runs where the agent has a local shell with Node.js 22 or later (Claude Code
+or Codex class); the script needs no packages and no network.
+`<skillflow-dir>` is the folder of this `SKILL.md`:
 
 ```bash
-node <skill-dir>/scripts/skillflow.mjs validate <flow.kdl> [--skill <target-skill-dir>] [--draft]
-node <skill-dir>/scripts/skillflow.mjs render <flow.kdl> [-o <page.html>] [--skill <target-skill-dir>] [--draft]
-node <skill-dir>/scripts/skillflow.mjs fmt <flow.kdl> [--check]
-node <skill-dir>/scripts/skillflow.mjs map <target-skill-dir>
-node <skill-dir>/scripts/skillflow.mjs rules <target-skill-dir>
+node <skillflow-dir>/scripts/skillflow.mjs validate <flow.kdl> [--skill <target-skill-dir>] [--draft]
+node <skillflow-dir>/scripts/skillflow.mjs render <flow.kdl> [-o <page.html>] [--skill <target-skill-dir>] [--draft]
+node <skillflow-dir>/scripts/skillflow.mjs fmt <flow.kdl> [--check]
+node <skillflow-dir>/scripts/skillflow.mjs map <target-skill-dir>
+node <skillflow-dir>/scripts/skillflow.mjs rules <target-skill-dir>
 ```
 
 Run `--help` or `<command> --help` for full flags and exit codes. Agent rules:
 
-- **Human CLI (`skillflowctl` / `skillflowctl.cmd`).** Gives a person `page`, `lint`, `edit` (serves a live browser editor until stopped — hand it to the user, do not run it as an agent), and a terminal menu. In help mode, give the user `skillflowctl` commands; use `node <skill-dir>/scripts/skillflow.mjs` for your own runs.
+- **Human CLI (`skillflowctl` / `skillflowctl.cmd`).** Gives a person `page`, `lint`, `edit` (serves a live browser editor until stopped — hand it to the user, do not run it as an agent), and a terminal menu. In help mode, give the user `skillflowctl` commands; use `node <skillflow-dir>/scripts/skillflow.mjs` for your own runs.
 - **`validate`.** Prints `OK`/`FAIL` with error, `todo`, and warning counts (`OK` with warnings is not done in reverse), `versions:`, and `invariants:` (by keeper; `unstated` has no `by`). Resolves the target skill from `--skill`, `skill="<path>"`, beside/above the flow file, or a unique name match in the repo, and checks `file=` paths and `ref=` defining places against it.
 - **`fmt`.** Run after every flow edit; do not lay out a flow by hand. Exit 1 without `--check` means a syntax or placement error: fix the reported line and re-run.
 - **`--draft`.** Turns completeness gaps into `todo` lines (exit 0 when only `todo`s and warnings remain). Use only while sketching; reverse, check, and sync require a clean run without `--draft`.
 - **`render`.** Validates and writes a self-contained HTML page (default `<skill>-<skill-version>.html` or `<skill>.html`, outside the skill folder). Never read or edit `assets/` to render. Refuses paths inside the skill folder, on the flow file, or over a page with saved review comments (exit 2): pick another `-o` path outside the skill folder.
-- **`map` / `rules`.** `map` lists files, headings, and references (`[name and purpose only]`, `[in <folder>/]`, `[not in skill]`). `rules` extracts candidate rule lines, script failure lines with `[under: …]`, and `[write]` lines; you decide which are rules.
+- **`map` / `rules`.** `map` lists files, headings, and references (`[name and purpose only]`, `[in <folder>/]`, `[not in skill]`). `rules` extracts candidate rule lines, script failure lines with `[under: …]`, and `[write]` lines; you decide which are rules. `rules` skips `assets/`: read a script there that the workflow runs.
 - **Exit 2.** Three causes, named in the error: (1) wrong CLI args or folder in place of a flow file / missing `SKILL.md` — fix the command from the error or `--help` and re-run; (2) refused `render` path — pass another `-o` outside the skill folder; (3) unreadable/unwritable file — report the path and stop.
 
 ## Rules for every mode
 
 - **Location.** One flow file per skill: a `.kdl` file whose first line
-  starts with `skillflow`. A new one is `<skill-name>.kdl` next to the target
+  starts with `skillflow`. A new one is `<skill>.kdl` next to the target
   `SKILL.md`, or the path that the user or the repository's SkillFlow block
   names: a subfolder of the skill, or a separate tree that mirrors the skill
   paths. An existing flow file keeps its name.
@@ -60,7 +64,7 @@ Run `--help` or `<command> --help` for full flags and exit codes. Agent rules:
   and what each changes in the flow, and shows the smallest visual that fits:
   a table, or a flow fragment per option. No answer means no change. When
   nobody can answer (a batch or subagent run), report the questions and stop.
-  A ❓ in the flow is a report item; in reverse, a ❓ that changes who acts or
+  A ❓ in the flow, written as a `// ?` line, is a report item; in reverse, a ❓ that changes who acts or
   where the flow goes next is also a question when someone can answer.
 - **Prose style.** Write the flow's quoted prose in ASD-STE100 with
   given-new flow: topic sentence first, every term defined before use, every
@@ -188,14 +192,15 @@ Report differences; change no file.
 
    Count these elements: each `context` line; each node, `on-fail` included; each
    `when` outcome, a gate's implied `approved` and `revise`, and the implied
-   outcome of a one-`when` decide; each executor (a gate is human), an invariant's `by` included: `by=code` is ✅ only with a script line that fails or blocks on the broken rule; each `input`, `output`, or
+   outcome of a one-`when` decide; each executor (a gate is human), an invariant's `by` included: `by=code` is ✅ only with a script line that fails or blocks on the broken rule, and ❌ without one, whatever the instructions say about the script; each `input`, `output`, or
    `tools` line; each `file`, `skill`, and `ref`; and the order of each block with two
    or more nodes. A prose intent that the skill drops or changes is ❌ other
    on its node. For an element with `ref`, compare it first with the skill
    text at the label's defining places; a ref that `validate` finds no
    defining place for is ❌ other: the skill renamed or removed the label.
 4. Search every file you read for behavior that passes the intent test and has
-   no node; each is ❌ extra in skill. An order difference is ❌ even when the
+   no node; each is ❌ extra in skill. A rule about the result that authoring.md
+   leaves in the skill is not a difference. An order difference is ❌ even when the
    result is fine. The flow's own `// ?` comments are evidence, not differences.
    When the flow has a `ref`, also look for labels of workflow parts (step IDs,
    checkpoints, modes) at defining places in the files you read that no `ref`
@@ -243,7 +248,8 @@ end appears in the explanation or on the page.
 
 ## Semantic diff
 
-Show changes in the shape of the flow, not as text lines:
+Show changes in the shape of the flow, not as text lines. Adapt this example
+to the change:
 
 ```diff
  context

@@ -53,6 +53,7 @@ function walk(dir, out = [], depth = 6) {
 export function findFlows(cwd = process.cwd()) {
   const root = gitRoot(cwd);
   // git decides: tracked and untracked files, not ignored ones, so installed copies and scratch files stay out
+  // maxBuffer: 64 MB, because the flow and SKILL.md paths of a large repository can pass Node's default of 1 MB
   const listed = root && spawnSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.kdl", "*SKILL.md"], {cwd: root, encoding: "utf8", maxBuffer: 64 << 20});
   const files = listed?.status === 0 ? listed.stdout.split("\0").filter(Boolean).map((file) => join(root, file)) : walk(resolve(cwd));
   return {
@@ -109,7 +110,7 @@ function distance(a, b) {
   return d[a.length][b.length];
 }
 
-/** The nearest command to `word`, or null when none is close. */
+/** The nearest command to `word`, or null when none is close: 2 edits cover two typos or swaps (a swap is one edit), and more would name an unrelated command. */
 export function suggestCommand(word, commands) {
   const [best] = commands.map((name) => [distance(word.toLowerCase(), name), name]).filter(([far]) => far <= 2 && far < word.length).sort(([x], [y]) => x - y);
   return best?.[1] ?? null;
@@ -131,6 +132,21 @@ function saveLast(all) {
   try { mkdirSync(dirname(LAST), {recursive: true}); writeFileSync(LAST, JSON.stringify(all)); } catch { /* a read-only home: no memory, same menu */ }
 }
 
+/**
+ * One answer of the menu, trimmed; a number is the exit code of a quit: 0 for q or Ctrl+D, 130 for Ctrl+C, as a shell expects.
+ * Without this, Ctrl+C prints an AbortError stack and Ctrl+D leaves the question unsettled.
+ */
+export function ask(prompt, text) {
+  return new Promise((done) => {
+    const quit = (code) => () => { prompt.off("close", eof).off("SIGINT", interrupt); process.stdout.write("\n"); done(code); };
+    const eof = quit(0), interrupt = quit(130);
+    prompt.once("close", eof).once("SIGINT", interrupt);
+    prompt.question(text).then(
+      (answer) => { prompt.off("close", eof).off("SIGINT", interrupt); answer = answer.trim(); done(answer.toLowerCase() === "q" ? 0 : answer); },
+      interrupt);
+  });
+}
+
 /** The terminal menu: pick a flow and an action, then `run([action, flow])`. Returns the exit code. */
 export async function runMenu(run, cwd = process.cwd()) {
   cwd = real(cwd);
@@ -146,16 +162,19 @@ export async function runMenu(run, cwd = process.cwd()) {
   });
   const key = gitRoot(cwd) ?? resolve(cwd), all = readLast(), last = all[key] ?? {};
   console.log(menuRows(entries, last.flow, paint).join("\n"));
+  console.log(`${paint("dim", "type a number or a name; Enter takes the one in [ ]")}  ${paint("bold", "quit: q, Ctrl+C, or Ctrl+D")}`);
   const prompt = createInterface({input: process.stdin, output: process.stdout});
   try {
     const fallback = Math.max(0, entries.findIndex(({flow}) => flow === last.flow)) + 1;
-    const pick = (await prompt.question(`flow [${fallback}]: `)).trim() || String(fallback);
-    const entry = entries[Number(pick) - 1] ?? entries.find(({name}) => name === pick);
+    const pick = await ask(prompt, `flow [${fallback}] · q quits: `);
+    if (typeof pick === "number") return pick;
+    const entry = entries[Number(pick || fallback) - 1] ?? entries.find(({name}) => name === pick);
     if (!entry) { console.error(`no flow ${pick}`); return 2; }
     const actions = ["page", "lint", "edit"], lastAction = actions.includes(last.action) ? last.action : "page";
-    const answer = (await prompt.question(`action: p page · l lint · e edit [${lastAction[0]}]: `)).trim().toLowerCase() || lastAction;
-    const action = actions.find((name) => name === answer || name[0] === answer);
-    if (!action) { console.error(`no action ${answer}; p, l, or e`); return 2; }
+    const answer = await ask(prompt, `action: p page · l lint · e edit · q quits [${lastAction[0]}]: `);
+    if (typeof answer === "number") return answer;
+    const action = actions.find((name) => name === (answer.toLowerCase() || lastAction) || name[0] === answer.toLowerCase());
+    if (!action) { console.error(`no action ${answer}; p, l, e, or q`); return 2; }
     saveLast({...all, [key]: {flow: entry.flow, action}});
     return run([action, entry.flow]);
   } finally {

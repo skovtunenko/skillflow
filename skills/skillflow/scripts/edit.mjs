@@ -66,7 +66,7 @@ export function startEditor(flow, skill) {
     if (route === "GET events") {
       response.writeHead(200, {"content-type": "text/event-stream", "cache-control": "no-store"});
       // the flow and the skill's files as they are now: they may have changed after the page was sent or while it was cut off;
-      // a page ignores a text it already has
+      // a page ignores a text it already has; `retry: 1000`: a page whose stream is cut connects again after one second
       response.write(`retry: 1000\n\nevent: flow\ndata: ${JSON.stringify({text: readText(flow)})}\n\n`);
       if (skill) response.write(`event: files\ndata: ${JSON.stringify({files: skillFiles()})}\n\n`);
       clients.add(response);

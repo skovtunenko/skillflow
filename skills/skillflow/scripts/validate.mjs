@@ -34,7 +34,7 @@ const ARGS = {skillflow: [1, null], context: [1, 0], phase: [2, 1], step: [2, 1]
 const SAME_ENDS = 3; // authoring.md: a failure that several steps handle the same way is one invariant
 const PROSE_CHARS = 200, PROSE_ITEMS = 5; // authoring.md: the intent in a sentence or two, or one list of five items
 const FLOW_SHARE = 50, FLOW_SMALL = 4000; // a flow under FLOW_SMALL characters is short whatever the skill's size; percent of SKILL.md's size above which the flow is no longer a short view of the skill
-export const READ_LIMIT = 5_000_000;
+export const READ_LIMIT = 5_000_000; // bytes: the cap of the bulk file scans (map, rules, ref labels, the editor's copy of the skill); a larger file is skipped there
 // JavaScript \w and \b are ASCII; W is the Unicode word class for names in any language
 export const W = "\\p{L}\\p{N}_";
 export const FAILURE = new RegExp(`(?<![${W}])(fail|die|error)\\s*\\(|(?<![${W}])raise [${W}]|sys\\.exit\\(\\s*[^0)\\s]|(?<![${W}])exit [1-9]|file=sys\\.stderr|console\\.error|(?<![${W}])throw [${W}]|process\\.exit\\(\\s*[^0)\\s]|process\\.exitCode\\s*=\\s*[1-9]`, "u");

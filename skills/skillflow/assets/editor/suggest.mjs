@@ -5,7 +5,8 @@
 //   and only the Down arrow goes into the list.
 // Alt+Down, Ctrl+Space, the Suggest button, and Tab right after a word always open it with the first item selected.
 // Inside a string or a comment the list never opens.
-// The fields of an inserted template are marked in the text: the one to fill now, and the ones that Tab goes to next.
+// The fields of an inserted template are marked in the text: the one to fill now, and the others. Tab and Shift+Tab go round them;
+// Enter ends a one-line field, and Shift+Enter any field: the cursor goes to the next field, or after the last one to the end of its line.
 import {candidates, context, expand, rank} from "./complete.mjs";
 import {escapeHtml} from "./highlight.mjs";
 
@@ -17,9 +18,9 @@ const LINE = 20, PAD_TOP = 10, PAD_LEFT = 14; // the line height and the padding
  */
 export function suggester(area, pop, say, {tokenize, grammar, auto}) {
   // at: the place of the cursor (complete.mjs context); list: the items shown; active: the selected one, -1 for none;
-  // fields: the template fields still to visit; seen: the cursor's place at the last look; quiet: the list's own insert is on its way;
-  // now: the field to fill, {start, end, at, of, fresh}: `end` is a distance from the end of the text, as in `fields`
-  const state = {at: null, list: [], active: 0, fields: [], now: null, seen: -1, quiet: false, char: 0};
+  // fields: the [start, end] of each template field; now: the field to fill, {index, fresh}; length: the text's length at the last edit;
+  // seen: the cursor's place at the last look; quiet: the list's own insert is on its way
+  const state = {at: null, list: [], active: 0, fields: [], now: null, length: 0, seen: -1, quiet: false, char: 0};
   const marks = Object.assign(document.createElement("div"), {id: "flds"});
   marks.setAttribute("aria-hidden", "true"); // the live region says the field
   pop.parentNode.append(marks);
@@ -48,20 +49,39 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
     pop.style.top = `${y + height > area.clientHeight && y - LINE - height > 0 ? y - LINE - height : y}px`;
   }
 
-  /** Mark the fields of the inserted template: a frame on the one to fill, a dashed frame on each next one, and a count where Tab goes on. */
+  /** Mark the fields of the inserted template: a frame on the one to fill, a dashed frame on each other one, and the field's keys. */
   function drawFields() {
-    const {now} = state, length = area.value.length;
-    // the marks show only while the cursor is in the field to fill: after an Undo, or a move away, their places are not sure
-    if (!now || area.selectionStart < now.start || area.selectionEnd > length - now.end) { marks.innerHTML = ""; return; }
-    const frame = (start, end, kind) => { const from = spot(start), to = spot(end); return `<i class="fld ${kind}" style="left:${from.x - 3}px;top:${from.y}px;width:${Math.max(to.x - from.x, 2) + 6}px"></i>`; };
-    let html = state.fields.map(([start, end]) => frame(length - start, length - end, "next")).join("");
-    const {x, y} = spot(now.start);
-    html += frame(now.start, length - now.end, now.fresh ? "now in" : "now");
+    const {now, fields} = state, field = here();
+    // the marks show only while the cursor is in the field to fill: after a move away their places are not sure
+    if (!field) { marks.innerHTML = ""; return; }
+    const frame = ([start, end], kind) => { const from = spot(start), to = spot(end); return `<i class="fld ${kind}" style="left:${from.x - 3}px;top:${from.y}px;width:${Math.max(to.x - from.x, 2) + 6}px"></i>`; };
+    let html = fields.map((other) => (other === field ? frame(field, now.fresh ? "now in" : "now") : frame(other, "next"))).join("");
+    const {x, y} = spot(field[0]), last = now.index === fields.length - 1, enter = block(field) ? "Shift+Enter" : "Enter";
     // above the line; under it on the first line, where no room is above
-    if (now.of > 1) html += `<b class="fld-tip" style="left:${Math.max(0, x - 3)}px;top:${y >= 22 ? y - 22 : y + LINE + 2}px">${now.at}/${now.of}${state.fields.length ? " · Tab: next" : ""}</b>`;
+    if (fields.length > 1) html += `<b class="fld-tip" style="left:${Math.max(0, x - 3)}px;top:${y >= 22 ? y - 22 : y + LINE + 2}px">${now.index + 1}/${fields.length} · ${last ? `${enter}: done` : `Tab or ${enter}: next`}</b>`;
     marks.innerHTML = html;
   }
   const endFields = () => { state.fields = []; state.now = null; drawFields(); };
+  /** The [start, end] of the field to fill while the cursor is in it; else null. */
+  function here() {
+    const field = state.now && state.fields[state.now.index];
+    return field && area.selectionStart >= field[0] && area.selectionEnd <= field[1] ? field : null;
+  }
+  // a field on a line of its own is a block's body, where Enter adds a line; every other field is one line (no template has a `"""` field)
+  const block = ([start]) => !area.value.slice(area.value.lastIndexOf("\n", start - 1) + 1, start).trim();
+  /** The text changed: the field to fill grows or shrinks, and the fields after it move. An edit outside it ends the fields. */
+  function follow(event) {
+    const {now, fields} = state, change = area.value.length - state.length;
+    state.length = area.value.length;
+    if (!now) return;
+    // Undo and Redo put back text whose places the fields cannot follow, even at the same length: the fields end
+    if (/^history/.test(event?.inputType ?? "")) return endFields();
+    if (!change) return;
+    const field = fields[now.index];
+    if (area.selectionStart < field[0] || area.selectionStart > field[1] + change) return endFields();
+    field[1] += change;
+    for (const after of fields.slice(now.index + 1)) { after[0] += change; after[1] += change; }
+  }
 
   function draw() {
     const {list, active} = state;
@@ -71,8 +91,11 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
     pop.innerHTML = list.map((item, index) => `<li role="option" id="pop-${index}" aria-selected="${index === active}" data-index="${index}"><b>${escapeHtml(item.label)}</b><span>${escapeHtml(item.hint)}</span></li>`).join("")
       + `<li class="pop-tip" role="presentation">${active < 0 ? "↓ goes into the list · Enter and Tab edit the text · Esc closes" : "Enter or Tab inserts · Esc closes"}</li>`;
     // a new field is said once, before what the list says
-    const field = state.now?.fresh && state.now.of > 1 ? `Field ${state.now.at} of ${state.now.of}. ` : "";
-    say.textContent = field + (!list.length ? "" : active < 0 ? `${list.length} suggestions. The Down arrow goes into the list.` : `${list.length} suggestions. ${list[active].label}, ${list[active].hint}`);
+    // the marks of the fields are hidden from a screen reader, so the region says the field's value and its keys
+    const {now, fields} = state, enter = now && block(fields[now.index]) ? "Shift+Enter" : "Enter";
+    const field = now?.fresh && fields.length > 1 ? `Field ${now.index + 1} of ${fields.length}, ${area.value.slice(...fields[now.index])}. ${now.index === fields.length - 1 ? `${enter}: done` : `Tab or ${enter}: next`}, Escape: end. ` : "";
+    const count = `${list.length} suggestion${list.length === 1 ? "" : "s"}.`;
+    say.textContent = field + (!list.length ? "" : active < 0 ? `${count} The Down arrow goes into the list.` : `${count} ${list[active].label}, ${list[active].hint}`);
     drawFields();
     if (state.now) state.now.fresh = false;
     if (!list.length) return;
@@ -89,7 +112,9 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
     const lineBefore = area.value.slice(area.value.lastIndexOf("\n", state.seen - 1) + 1, state.seen), choosing = Boolean(at.word) || at.kind === "value";
     const idle = !at.word && (at.kind === "node" ? !lineBefore.trim() : (at.kind === "prop" || at.kind === "name") && /\s$/.test(lineBefore));
     state.list = ranked.length && !complete && !silent && (force || (auto() && (choosing || idle))) ? ranked : [];
-    state.active = force || choosing ? 0 : -1;
+    // a field that already has a value selects it, so that Tab or Enter keeps it
+    const value = area.value.slice(state.seen, area.selectionEnd);
+    state.active = force || choosing ? Math.max(0, state.list.findIndex((item) => item.insert === value)) : -1;
     draw();
   }
   const close = () => { state.list = []; draw(); };
@@ -100,19 +125,25 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
     area.setSelectionRange(from, area.selectionEnd);
     document.execCommand("insertText", false, made.text); // the browser's Undo takes the insert back
     state.quiet = false;
-    // a field is kept as its distance from the end of the text: typing in one field does not move the fields after it
-    // shortcut: an edit after the fields moves them; Escape or a press in the text ends the fields. Upgrade: follow the edits
-    const length = area.value.length;
-    if (made.stops.length) { state.fields = made.stops.map(([start, end]) => [length - from - start, length - from - end]); state.now = null; }
-    if (!nextField()) look(); // after `by=` the values open at once
+    // a new template's fields take the place of the old ones; a value picked in a field goes on to the next field
+    if (made.stops.length) { state.fields = made.stops.map(([start, end]) => [from + start, from + end]); state.now = null; return go(1); }
+    if (!here() || !done()) look(); // after `by=` the values open at once
   }
-  function nextField() {
-    const field = state.fields.shift(), of = state.now ? state.now.of : state.fields.length + 1;
-    if (!field) { if (state.now) endFields(); return false; }
-    state.now = {start: area.value.length - field[0], end: field[1], at: of - state.fields.length, of, fresh: true};
-    area.setSelectionRange(state.now.start, area.value.length - field[1]);
+  /** Select the field `step` places from the one to fill, round the ends; the first field when none is to fill. */
+  function go(step) {
+    const count = state.fields.length, index = state.now ? (state.now.index + step + count) % count : 0;
+    state.now = {index, fresh: true};
+    area.setSelectionRange(...state.fields[index]);
     look();
     return true;
+  }
+  /** End the field to fill: the cursor goes to the next field; after the last one, to the end of its line, and the fields end. */
+  function done() {
+    if (state.now.index < state.fields.length - 1) return go(1);
+    const end = state.fields[state.now.index][1], line = area.value.indexOf("\n", end), at = line < 0 ? area.value.length : line;
+    endFields();
+    area.setSelectionRange(at, at);
+    return false;
   }
   /** Tab right after a word completes it: one fit goes in at once, several open the list. False: nothing fits, and Tab indents. */
   function tabComplete() {
@@ -134,15 +165,17 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
   return {
     /** True while the list is open. */
     get open() { return state.list.length > 0; },
-    /** The text changed by typing. */
-    input() { if (!state.quiet) look(); },
+    /** True while a template's fields are to fill: Escape ends them and does not let the next Tab leave the text. */
+    get filling() { return Boolean(state.now); },
+    /** The text changed by `event`, an input event. */
+    input(event) { follow(event); if (!state.quiet) look(); },
     /** The cursor moved without typing: the list closes. */
     moved() { if (area.selectionStart !== state.seen) look(false, true); },
     /** The text field scrolled. */
     scrolled() { if (state.list.length) place(); drawFields(); },
     /** Open the list by hand. */
     ask() { area.focus(); look(true); },
-    /** A key of the text field; true when the list took it. Tab: a template field, then a completion; false leaves Tab to the indent. */
+    /** A key of the text field; true when the list or a field took it. Tab: a template field, then a completion; false leaves Tab to the indent. */
     key(event) {
       const {list} = state;
       // Alt+Down opens a list in a combobox by the ARIA pattern; Ctrl+Space is for a system that leaves it free
@@ -155,10 +188,18 @@ export function suggester(area, pop, say, {tokenize, grammar, auto}) {
           return true;
         }
         if ((event.key === "Enter" || event.key === "Tab") && state.active >= 0 && !event.shiftKey) { event.preventDefault(); accept(list[state.active]); return true; }
-        if (event.key === "Escape") { event.preventDefault(); close(); return true; }
+        if (event.key === "Escape") { event.preventDefault(); close(); endFields(); return true; }
+      }
+      const plain = !event.metaKey && !event.ctrlKey && !event.altKey, field = here();
+      if (field && plain && (event.key === "Tab" || (event.key === "Enter" && (event.shiftKey || !block(field))))) {
+        event.preventDefault();
+        // one field alone has nowhere to go round: Tab ends it, as Enter does
+        if (event.key === "Tab" && state.fields.length > 1) go(event.shiftKey ? -1 : 1); else done();
+        return true;
       }
       if (event.key === "Escape") endFields();
-      if (event.key === "Tab" && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey && (nextField() || tabComplete())) { event.preventDefault(); return true; }
+      // the cursor left the fields: Tab ends them and completes or indents
+      if (event.key === "Tab" && plain && !event.shiftKey) { if (state.now) endFields(); if (tabComplete()) { event.preventDefault(); return true; } }
       return false;
     },
   };

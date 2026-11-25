@@ -20,6 +20,7 @@ var sfComments = (function () {
       c.intents = (Array.isArray(c.intents) ? c.intents : []).map(function (x) { return x === 'Unclear' ? 'Confusing' : x; })
         .filter(function (x, i, all) { return INTENT_NAMES.indexOf(x) >= 0 && all.indexOf(x) === i; });
       if (!c.words.trim() && !c.intents.length) return false;
+      // a unique id of 1 to 64 word chars or hyphens is kept, any other is replaced, so a file cannot set a huge, odd or repeated id; newId() makes about 15
       if (typeof c.id !== 'string' || !/^[\w-]{1,64}$/.test(c.id) || seen[c.id]) c.id = newId();
       seen[c.id] = true;
       // every field the page shows or exports gets its type here, so no foreign value reaches the export raw
@@ -39,6 +40,7 @@ var sfComments = (function () {
     if (Array.isArray(raw)) raw = { comments: raw };  // version 0.3 stored a bare list
     if (!raw || typeof raw !== 'object') return null;
     var rev = count(raw.rev);
+    // 80 chars caps a copy or base key read from a file or a browser slot; a longer or odd value reads as none
     function id(x) { return typeof x === 'string' && /^[\w:-]{1,80}$/.test(x) ? x : null; }
     // ver: the version of a saved file (its save time, also when dated ahead); from: in a browser slot, the file
     // version the slot continues, -1 when unknown
