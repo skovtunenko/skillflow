@@ -11,7 +11,7 @@ const NODES = {
   decide: ['decide ${name} "${question?}" by=${llm} {\n\twhen ${yes} {\n\t\t${}\n\t}\n}', "a fork with a when for each answer"],
   gate: ['gate ${name} "${question?}"', "an approval by the user"],
   when: ["when ${outcome} {\n\t${}\n}", "one answer of the fork"],
-  "on-fail": ['on-fail "${what happens}"', "what happens when the step fails"],
+  "catch": ['catch "${what happens}"', "what happens when the step fails"],
   end: ['end "${reason}"', "the flow ends here"],
   tools: ["tools ${tool}", "the tools of the node"],
 };

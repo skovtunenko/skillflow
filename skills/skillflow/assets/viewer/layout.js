@@ -45,11 +45,11 @@
       add(head, glyph('end'), el('span', 'kw', 'end'));
       if (n.text) body = cardProse(n.text);
       d.setAttribute('aria-label', 'End' + (n.text ? ': ' + plain(n.text) : ''));
-    } else if (n.kind === 'onfail') {
-      add(head, glyph('fail'), document.createTextNode('on fail'), el('span', 'arrow', '→'), el('span', 'how ' + (n.ends ? 'stop' : 'recover'), n.ends ? 'stop' : 'recover'));
+    } else if (n.kind === 'catch') {
+      add(head, glyph('fail'), document.createTextNode('catch'), el('span', 'arrow', '→'), el('span', 'how ' + (n.ends ? 'stop' : 'recover'), n.ends ? 'stop' : 'recover'));
       if (n.prose) body = cardProse(n.prose);
       f = foot(n);
-      d.setAttribute('aria-label', 'On fail of ' + title(byId[n.step]));
+      d.setAttribute('aria-label', 'Catch of ' + title(byId[n.step]));
     } else {
       d.classList.add('by-' + (EXEC[n.by] ? n.by : 'x'));
       if (n.kind === 'decide' || n.kind === 'gate') head.appendChild(add(el('span', 'dg'), glyph(n.kind)));
@@ -58,10 +58,10 @@
       var text = n.kind === 'decide' || n.kind === 'gate' ? n.question || n.prose : n.prose;
       if (text) body = cardProse(text);
       f = foot(n);
-      if (footnoted(n.onfail)) {
-        // an on-fail that holds one end stops the flow: the footnote says why, from the end, else from the on-fail
-        var fo = n.onfail, stop = fo.children.length > 0, said = (stop && fo.children[0].text) || fo.prose;
-        var note = add(el('div', 'nfail'), add(el('span', 'how ' + (stop ? 'stop' : 'recover')), stop ? '■ on fail → stop' : '↻ on fail'),
+      if (footnoted(n.catch)) {
+        // a catch that holds one end stops the flow: the footnote says why, from the end, else from the catch
+        var fo = n.catch, stop = fo.children.length > 0, said = (stop && fo.children[0].text) || fo.prose;
+        var note = add(el('div', 'nfail'), add(el('span', 'how ' + (stop ? 'stop' : 'recover')), stop ? '■ catch → stop' : '↻ catch'),
           el('span', 'ft', said ? plain(said).replace(/^(-|\d+\.)\s+/, '') : stop ? 'the flow stops' : 'the flow continues'));
         f = f ? add(el('div'), f, note) : note;
       }
@@ -160,7 +160,7 @@
       LH = Math.max(LH, l.stackH);
       if (l.kind === 'fail' && l.block.exit) { l.back = measureLabel('then continues', 'fail'); rejoin = Math.max(rejoin || 0, l.back.h); }
       var w = Math.max.apply(null, [l.block.w, l.back ? l.back.w : 0].concat(l.parts.map(function (p) { return p.lab.w; })));
-      if (i && l.kind === 'fail') x += GAP_X;  // an on-fail lane stands further off the main line
+      if (i && l.kind === 'fail') x += GAP_X;  // a catch lane stands further off the main line
       laneX.push(x); laneW.push(w);
       laneAx.push(l.block.nodes.length ? x + (w - l.block.w) / 2 + l.block.ax : x + w / 2);
       x += w + GAP_X;
@@ -243,9 +243,9 @@
       if ((n.implied || []).some(function (o) { return o.outcome === 'revise'; })) g.loop = { x: g.headX || 0, y: head.h / 2, h: head.h, key: n.id + '=revise' };
       return g;
     }
-    if (n.kind === 'step' && n.onfail && !footnoted(n.onfail)) {
-      var f = n.onfail, failBlock = tagLane(series([leaf(f, FAIL_W, false)].concat(f.children.map(layoutNode))), f.id + '=fails');
-      return fork(head, [{ label: 'ok', kind: 'main', key: f.id + '=ok', block: blank() }, { label: 'on fail', kind: 'fail', key: f.id + '=fails', block: failBlock }], 0);
+    if (n.kind === 'step' && n.catch && !footnoted(n.catch)) {
+      var f = n.catch, failBlock = tagLane(series([leaf(f, FAIL_W, false)].concat(f.children.map(layoutNode))), f.id + '=fails');
+      return fork(head, [{ label: 'ok', kind: 'main', key: f.id + '=ok', block: blank() }, { label: 'catch', kind: 'fail', key: f.id + '=fails', block: failBlock }], 0);
     }
     return head;
   }

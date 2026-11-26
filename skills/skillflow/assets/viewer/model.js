@@ -19,7 +19,7 @@
   var EXEC = { llm: 'LLM', code: 'code', human: 'human' };
   var NODE_W = 256, END_W = 216, FAIL_W = 236, PHASE_W = 256, GAP_Y = 32, GAP_X = sfGeom.GAP_X, PAD = 16, HEAD = 36, INNER_TOP = 60,
     FORK = 16, STACK = 4, FOLD_W = 220, JOIN = 24, MARGIN = 40, MIN_SCALE = 0.2, MAX_SCALE = 2, READABLE = 0.6, LOD_PHASE = 0.32, TOP = 48;  // TOP: screen px kept free under the floating toolbar
-  var FLOW_KW = { phase: 1, step: 1, decide: 1, gate: 1, end: 1, when: 1, 'on-fail': 1 };
+  var FLOW_KW = { phase: 1, step: 1, decide: 1, gate: 1, end: 1, when: 1, 'catch': 1 };
   var ROLES = ['output', 'input', 'uses', 'mentions'];  // strongest first; mentions: the prose names the data
 
   // ---------- glyphs (16x16, stroke) ----------
@@ -91,11 +91,11 @@
       byId[n.id] = n; n._unit = unit; order.push(n);
       at(lt, n.line, n.id);
       if (n.kind === 'phase') { n._depth = depth + 1; units.push(n); index(n.children, lt, order, units, n, depth + 1); }
-      if (n.onfail) {
-        byId[n.onfail.id] = n.onfail; n.onfail._unit = unit;
-        at(lt, n.onfail.line, n.onfail.id);
-        n.onfail.children.forEach(function (c) { c._fail = n.onfail; });
-        index(n.onfail.children, lt, order, units, unit, depth);
+      if (n.catch) {
+        byId[n.catch.id] = n.catch; n.catch._unit = unit;
+        at(lt, n.catch.line, n.catch.id);
+        n.catch.children.forEach(function (c) { c._fail = n.catch; });
+        index(n.catch.children, lt, order, units, unit, depth);
       }
       (n.whens || []).forEach(function (w) {
         w.kind = 'when'; w._decide = n; w._unit = unit; byId[w.id] = w;
@@ -127,12 +127,12 @@
   function keepPrefs() { if (host) host.remember({ view: state.view, split: state.split, dir: state.dir, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut }); }
   // a per-unit toggle wins over the stepwise level: open while its depth is within the level
   function isCollapsed(u) { var o = state.override[u.id]; return u._open ? false : o != null ? o : u._depth > state.level; }
-  // an on-fail with no cards of its own, or with one end only, is a footnote of its step unless the reader shows failure paths
-  function footable(f) { return !!f && f.kind === 'onfail' && (!f.children.length || (f.children.length === 1 && f.children[0].kind === 'end')); }
+  // a catch with no cards of its own, or with one end only, is a footnote of its step unless the reader shows failure paths
+  function footable(f) { return !!f && f.kind === 'catch' && (!f.children.length || (f.children.length === 1 && f.children[0].kind === 'end')); }
   function footnoted(f) { return footable(f) && !state.failPaths; }
   function visibleId(id) {
     var n = byId[id], v = id;
-    if (n && n._fail && footnoted(n._fail)) n = n._fail; // the end of a footnoted on-fail shows as its step
+    if (n && n._fail && footnoted(n._fail)) n = n._fail; // the end of a footnoted catch shows as its step
     if (footnoted(n)) { v = n.step; n = byId[v]; }
     var u = n ? n._unit : null;
     while (u) { if (isCollapsed(u)) v = u.id; u = u._unit; }

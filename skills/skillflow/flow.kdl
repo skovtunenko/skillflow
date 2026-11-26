@@ -1,4 +1,4 @@
-skillflow 1.0 skill-version="2026.11.25.5" skillflow-version="2026.11.25.5"
+skillflow 1.0 skill-version="2026.11.26.2" skillflow-version="2026.11.25.5"
 
 context {
 	input request "what the user asks for, possibly naming a mode"
@@ -62,7 +62,7 @@ decide mode ref="Choose the mode" "Which mode does the request need?" by=llm """
 		}
 
 		step validate-draft by=code file="scripts/skillflow.mjs" "Run fmt and validate --draft on each draft and show the open todo items; run validate without --draft before the gate." {
-			on-fail "The agent fixes the draft before showing it."
+			catch "The agent fixes the draft before showing it."
 		}
 
 		gate accepted "Does the user accept the flow?" "Asked after the validated change is shown as a semantic diff." {
@@ -74,7 +74,7 @@ decide mode ref="Choose the mode" "Which mode does the request need?" by=llm """
 
 	when check ref="Check" {
 		step validate-flow by=code file="scripts/skillflow.mjs" {
-			on-fail {
+			catch {
 				end "report the validator errors; the skeleton must parse first"
 			}
 		}
@@ -132,7 +132,7 @@ decide mode ref="Choose the mode" "Which mode does the request need?" by=llm """
 		decide page "Did the user ask to see the flow as a page?" by=llm {
 			when yes {
 				step render-page by=code file="scripts/skillflow.mjs" "Render the page outside the skill folder, by default <skill>-<skill-version>.html next to the flow or the skill folder, and give its path. A draft uses --draft; #scenario= picks show one run." {
-					on-fail "Render refuses a page path inside the skill folder or on the flow file, and never overwrites a page with saved review comments: the agent renders to another path outside the skill folder."
+					catch "Render refuses a page path inside the skill folder or on the flow file, and never overwrites a page with saved review comments: the agent renders to another path outside the skill folder."
 				}
 			}
 		}

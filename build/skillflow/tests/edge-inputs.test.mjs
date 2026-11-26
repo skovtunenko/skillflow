@@ -26,8 +26,8 @@ test("a decide outcome named like an Object key keeps its implied outcome", () =
   assert.ok(fs.readFileSync(page, "utf8").includes('"implied":[{"outcome":"other"'));
 });
 
-test("on-fail with an end and continuing prose points to a decide, not to dropping the end", () => {
-  const file = flow(tmp(), 'step a "Do it." by=llm {\n  on-fail "If the token is absent, end. If the request times out, continue." {\n    end "missing token"\n  }\n}\n');
+test("catch with an end and continuing prose points to a decide, not to dropping the end", () => {
+  const file = flow(tmp(), 'step a "Do it." by=llm {\n  catch "If the token is absent, end. If the request times out, continue." {\n    end "missing token"\n  }\n}\n');
   const out = run("validate", file).stdout;
   assert.match(out, /holds an `end`, but its prose says the flow continues/);
   assert.match(out, /decide/);
@@ -56,7 +56,7 @@ test("render refuses a page it cannot read and leaves it unchanged", {skip: proc
   assert.equal(fs.readFileSync(page, "utf8"), before);
 });
 
-// Feedback from 20 reverse runs (2026-11-14): page name and version, closing end, library writes, depth in on-fail, router size base.
+// Feedback from 20 reverse runs (2026-11-14): page name and version, closing end, library writes, depth in catch, router size base.
 const skill = (dir, md, files = {}) => {
   const root = path.join(dir, "sk");
   fs.mkdirSync(path.join(root, "references"), {recursive: true});
@@ -100,11 +100,11 @@ test("rules marks library saves as writes", () => {
   assert.deepEqual(writes, [1, 2, 3]);
 });
 
-test("a decide inside on-fail and a top-level phase add no depth warning; nested phases and deeper logic still do", () => {
+test("a decide inside catch and a top-level phase add no depth warning; nested phases and deeper logic still do", () => {
   const deep = (inner) => `phase outer {\n  phase inner {\n    decide d "Q?" by=llm {\n      when yes {\n        step s "Do it." by=llm {\n${inner}        }\n      }\n    }\n  }\n}\n`;
-  const recovery = '        on-fail "If X, end." {\n          decide x "Is it X?" by=llm {\n            when yes {\n              step tell "Tell." by=human\n              end "x"\n            }\n          }\n        }\n';
+  const recovery = '        catch "If X, end." {\n          decide x "Is it X?" by=llm {\n            when yes {\n              step tell "Tell." by=human\n              end "x"\n            }\n          }\n        }\n';
   assert.doesNotMatch(run("validate", flow(tmp(), deep(recovery))).stdout, /levels deep/);
-  const main = '        on-fail "Stop." {\n          end "stop"\n        }\n';
+  const main = '        catch "Stop." {\n          end "stop"\n        }\n';
   assert.doesNotMatch(run("validate", flow(tmp(), deep(main))).stdout, /levels deep/);
   assert.doesNotMatch(run("validate", flow(tmp(), 'phase p {\n  decide d "Q?" by=llm {\n    when yes {\n      decide e "R?" by=llm {\n        when yes {\n          step s "Do." by=llm\n        }\n      }\n    }\n  }\n}\n')).stdout, /levels deep/);
   assert.match(run("validate", flow(tmp(), 'phase outer {\n  phase inner {\n    decide d "Q?" by=llm {\n      when yes {\n        decide e "R?" by=llm {\n          when yes {\n            step s "Do." by=llm\n          }\n        }\n      }\n    }\n  }\n}\n')).stdout, /4 levels deep/);

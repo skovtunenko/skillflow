@@ -11,7 +11,7 @@ phase gather {
 	step collect-changes by=code file="scripts/collect.sh" {
 		tools gh
 		output changes "the commits and pull requests since the last tag"
-		on-fail {
+		catch {
 			end "report that the tag does not exist"
 		}
 	}
@@ -32,7 +32,7 @@ phase write {
 	}
 	step publish by=code {
 		output changelog
-		on-fail {
+		catch {
 			step report-error by=llm "Show the error and leave CHANGELOG.md unchanged."
 			end "CHANGELOG.md stays unchanged"
 		}

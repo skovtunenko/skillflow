@@ -4,7 +4,7 @@
 // every other input reached is a read that gets a warning; unreachable: "kind:name"; end: names available where the flow
 // ends normally (null when every path stops at `end`); unused: outputs that no input names; flowOutputs: named flow
 // outputs that must be reported as not produced; recovery (optional): "output:data" flow outputs that exist only when a
-// step succeeds, because its on-fail continues without them (a warning);
+// step succeeds, because its catch continues without them (a warning);
 // terminates (optional): blocks that no path leaves.
 // Each text gets the first line `skillflow 1.0`.
 
@@ -285,7 +285,7 @@ step after by=llm {
     flowOutputs: [],
     text: `step s by=code {
   output x
-  on-fail "Retry once, then continue."
+  catch "Retry once, then continue."
 }
 step u by=llm {
   input x
@@ -296,7 +296,7 @@ step u by=llm {
     flowOutputs: [],
     text: `step s by=code {
   output x
-  on-fail {
+  catch {
     step h by=human {
       output note
     }
@@ -312,7 +312,7 @@ step u by=llm {
     flowOutputs: [],
     text: `step s by=code {
   output x
-  on-fail {
+  catch {
     step h by=llm {
       input x
     }
@@ -327,7 +327,7 @@ step u by=llm {
 }
 step s by=code {
   input req
-  on-fail {
+  catch {
     step h by=llm {
       input req
     }
@@ -335,13 +335,13 @@ step s by=code {
 }
 `,
     expect: {missing: [], unreachable: [], end: ["req"], unused: []}},
-  {name: "nested-termination-onfail", why: "on-fail end inside a branch; success path continues",
+  {name: "nested-termination-catch", why: "catch end inside a branch; success path continues",
     flowOutputs: [],
     text: `decide d "go?" by=llm {
   when a {
     step t by=code {
       output r
-      on-fail {
+      catch {
         end "t failed"
       }
     }
@@ -445,23 +445,23 @@ decide d "which?" by=llm {
 }
 `,
     expect: {missing: [], unreachable: [], end: [], unused: []}},
-  // declared recovery (grammar rule 5): an on-fail output says which data the recovery restores
-  {name: "recovery-silent-gap", why: "the on-fail continues without the report: the flow output depends on success",
+  // declared recovery (grammar rule 5): a catch output says which data the recovery restores
+  {name: "recovery-silent-gap", why: "the catch continues without the report: the flow output depends on success",
     flowOutputs: [], recovery: ["output:report"],
     text: `context {
   output report "the report"
 }
 step generate by=code {
   output report
-  on-fail "Continue without a report."
+  catch "Continue without a report."
 }
 `,
     expect: {missing: [], unreachable: [], end: ["report"], unused: []}},
-  {name: "recovery-declared", why: "the on-fail says it restores the report: no warning",
+  {name: "recovery-declared", why: "the catch says it restores the report: no warning",
     flowOutputs: [],
     text: `step generate by=code {
   output report
-  on-fail "Retry twice, then use the cached report." {
+  catch "Retry twice, then use the cached report." {
     output report
   }
 }
@@ -470,11 +470,11 @@ step publish by=code {
 }
 `,
     expect: {missing: [], unreachable: [], end: ["report"], unused: []}},
-  {name: "recovery-ends", why: "an on-fail that ends needs no recovery output",
+  {name: "recovery-ends", why: "a catch that ends needs no recovery output",
     flowOutputs: [],
     text: `step generate by=code {
   output report
-  on-fail {
+  catch {
     end "no report"
   }
 }
@@ -487,7 +487,7 @@ step publish by=code {
     flowOutputs: [],
     text: `step generate by=code {
   output report
-  on-fail {
+  catch {
     step write-by-hand by=human {
       output report
     }
@@ -502,7 +502,7 @@ step publish by=code {
     flowOutputs: [],
     text: `step generate by=code {
   output report
-  on-fail "Keep the partial report." {
+  catch "Keep the partial report." {
     output partial
   }
 }
@@ -512,11 +512,11 @@ step publish by=code {
 }
 `,
     expect: {missing: ["publish:partial"], unreachable: [], end: ["partial","report"], unused: []}},
-  {name: "recovery-in-handler", why: "the restored data is available inside the on-fail, as an outcome's output is inside its when",
+  {name: "recovery-in-handler", why: "the restored data is available inside the catch, as an outcome's output is inside its when",
     flowOutputs: [],
     text: `step generate by=code {
   output report
-  on-fail "Use the cached report." {
+  catch "Use the cached report." {
     output report
     step note-fallback by=llm {
       input report
@@ -528,7 +528,7 @@ step publish by=code {
 }
 `,
     expect: {missing: [], unreachable: [], end: ["report"], unused: []}},
-  // control flow: `terminates` lists, by hand, every block that no path leaves: "phase", "decision/outcome", "step/on-fail"
+  // control flow: `terminates` lists, by hand, every block that no path leaves: "phase", "decision/outcome", "step/catch"
   {name: "phase-gate-approved-ends", why: "approved ends inside a phase; rejected continues past it",
     flowOutputs: [], terminates: {review: false, "approval/approved": true, "approval/rejected": false},
     text: `context {
@@ -601,11 +601,11 @@ step finish by=llm
 step finish by=llm
 `,
     expect: {missing: [], unreachable: [], end: [], unused: []}},
-  {name: "phase-on-fail-ends", why: "an on-fail that ends does not end the phase: success continues",
-    flowOutputs: [], terminates: {work: false, "run/on-fail": true},
+  {name: "phase-catch-ends", why: "a catch that ends does not end the phase: success continues",
+    flowOutputs: [], terminates: {work: false, "run/catch": true},
     text: `phase work {
   step run by=code {
-    on-fail {
+    catch {
       end "failed"
     }
   }
@@ -623,26 +623,26 @@ export const formCases = [
   }
 }
 `, errors: [/`input` is not allowed inside `when`/]},
-  {name: "output-in-on-fail", text: `step s by=code {
+  {name: "output-in-catch", text: `step s by=code {
   output x
-  on-fail "Retry once." {
+  catch "Retry once." {
     output x
   }
 }
 `, errors: []},
-  {name: "on-fail-only-output", why: "an output says what the recovery restores, not what happens", text: `step s by=code {
+  {name: "catch-only-output", why: "an output says what the recovery restores, not what happens", text: `step s by=code {
   output x
-  on-fail {
+  catch {
     output x
   }
 }
-`, errors: [/`on-fail` is empty/]},
-  {name: "input-in-on-fail", text: `step s by=code {
-  on-fail "Retry once." {
+`, errors: [/`catch` is empty/]},
+  {name: "input-in-catch", text: `step s by=code {
+  catch "Retry once." {
     input x
   }
 }
-`, errors: [/`input` is not allowed inside `on-fail`/]},
+`, errors: [/`input` is not allowed inside `catch`/]},
   {name: "input-in-phase", text: `phase p {
   input x
 }
@@ -688,7 +688,7 @@ step s by=llm {
 step s by=llm {
   note x
 }
-`, errors: [/`note` is not allowed inside `step`.*allowed here: input, on-fail, output, tools/]},
+`, errors: [/`note` is not allowed inside `step`.*allowed here: catch, input, output, tools/]},
   {name: "unknown-in-when", text: `decide d "?" by=llm {
   when a {
     note x

@@ -28,7 +28,7 @@
     if (!run) return;
     Object.keys(run.vis).forEach(function (id) {
       var nums = run.vis[id], p = pos[id], n = byId[id]; if (!nums.length || !p) return;
-      var b = el('span', 'snum' + (n && (n.kind === 'gate' || n.by === 'human') ? ' ask' : '') + (n && n.kind === 'onfail' ? ' fail' : ''), nums.length > 1 ? nums[0] + '–' + nums[nums.length - 1] : String(nums[0]));
+      var b = el('span', 'snum' + (n && (n.kind === 'gate' || n.by === 'human') ? ' ask' : '') + (n && n.kind === 'catch' ? ' fail' : ''), nums.length > 1 ? nums[0] + '–' + nums[nums.length - 1] : String(nums[0]));
       b.setAttribute('aria-hidden', 'true'); b.style.left = p.x + 'px'; b.style.top = p.y + 'px';
       canvas.appendChild(b);
     });
@@ -95,11 +95,11 @@
         var fail = x.t === 'fail', ask = !fail && (n.kind === 'gate' || n.by === 'human');
         var main = add(el('span', 'sc-main'), add(el('span', 'sc-l'),
           n.kind === 'decide' || n.kind === 'gate' ? glyph(n.kind, 'sc-g') : fail ? glyph('fail', 'sc-g') : null,
-          el('span', 'sc-t', fail ? 'on fail' : n.name || n.kind), fail ? el('span', 'how ' + (n.ends ? 'stop' : 'recover'), n.ends ? 'stop' : 'recover') : execChip(n.kind === 'gate' ? 'human' : n.by)),
+          el('span', 'sc-t', fail ? 'catch' : n.name || n.kind), fail ? el('span', 'how ' + (n.ends ? 'stop' : 'recover'), n.ends ? 'stop' : 'recover') : execChip(n.kind === 'gate' ? 'human' : n.by)),
           el('span', 'sc-p', fail ? firstLine(n.prose) || 'Recovery of ' + title(byId[n.step]) : firstLine(n.kind === 'decide' || n.kind === 'gate' ? n.question || n.prose : n.prose)));
         li = add(el('li', 'sc-row' + (ask ? ' ask' : '') + (fail ? ' sc-fail' : '') + ' by-' + (n.kind === 'gate' ? 'human' : EXEC[n.by] ? n.by : 'x')),
           button('sc-go', [el('span', 'sc-n', String(x.num)), main], function () { mark(li); reveal(n.id); },
-            x.num + '. ' + (fail ? 'On fail of ' + title(byId[n.step]) : title(n)) + '. Show in the graph'));
+            x.num + '. ' + (fail ? 'Catch of ' + title(byId[n.step]) : title(n)) + '. Show in the graph'));
         if (x.fork) li.appendChild(forkControl(x.fork, n));
         stepLis.push(li);
       }
@@ -137,7 +137,7 @@
     var seg = el('div', 'seg'); seg.setAttribute('role', 'radiogroup');
     seg.setAttribute('aria-label', (n.kind === 'step' ? 'Result' : n.kind === 'gate' ? 'Your answer' : 'Outcome') + ': ' + (n.kind === 'step' ? title(n) : firstLine(n.question || n.prose) || title(n)));
     var opts = f.opts.map(function (o, i) {
-      var b = button('opt' + (o.ends ? ' ends' : '') + (o.revise ? ' rev' : ''), [o.revise ? glyph('loop') : null, el('span', null, o.o === 'fails' ? 'on fail' : o.o), o.ends ? glyph('end', 'og') : null], function () { pickOutcome(f.id, o.o); });
+      var b = button('opt' + (o.ends ? ' ends' : '') + (o.revise ? ' rev' : ''), [o.revise ? glyph('loop') : null, el('span', null, o.o === 'fails' ? 'catch' : o.o), o.ends ? glyph('end', 'og') : null], function () { pickOutcome(f.id, o.o); });
       b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(o.o === f.pick)); b.tabIndex = o.o === f.pick ? 0 : -1;
       if (o.ends) { b.dataset.tip = 'This answer ends the flow'; b.setAttribute('aria-label', o.o + ', ends the flow'); }
       if (o.revise) { b.dataset.tip = 'Ask for changes: the work is redone and the gate asks again'; b.setAttribute('aria-label', 'revise, redo the work and ask again'); }

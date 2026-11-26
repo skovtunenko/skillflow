@@ -3,5 +3,5 @@ FAIL <TMP>/flow.kdl · 1 error
   tools: -
   invariants: -
   versions: skill-version - · skillflow-version - · installed SkillFlow <VERSION>
-  <TMP>/flow.kdl:3: error: `on-fail` is empty (hint: say what happens: prose, steps, or end "reason")
+  <TMP>/flow.kdl:3: error: `catch` is empty (hint: say what happens: prose, steps, or end "reason")
   next: this error is a draft gap: fix it by its hint, or run `validate --draft` while you sketch

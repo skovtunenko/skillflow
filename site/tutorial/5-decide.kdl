@@ -2,7 +2,7 @@
 skillflow 1.0
 
 step collect-changes by=code "Run collect.sh for the tag." {
-	on-fail {
+	catch {
 		end "the tag does not exist"
 	}
 }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>SkillFlow</title>
-<meta name="description" content="SkillFlow is a declarative language for the intent of an agent skill.">
+<meta name="description" content="SkillFlow is a non-executable intent specification for the workflow of an agent skill. The skill implements the flow file; nothing executes it.">
 <script>
 // a chosen theme applies before the first paint; the flow page keeps its choice under the same key
 try { const t = localStorage.getItem("skillflow-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage is off: the system theme */ }
@@ -33,14 +33,13 @@ code,pre{font-family:var(--mono)}
 .brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:700;font-size:var(--fs-17);letter-spacing:-.02em;white-space:nowrap}
 .mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--accent-fill);color:var(--accent-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .18),0 1px 2px rgb(0 0 0 / .2)}
 .mark .g{stroke-width:1.7}
-.ver{font:500 var(--fs-11)/1 var(--mono);color:var(--muted);padding:4px 7px;border:1px solid var(--line);border-radius:999px;letter-spacing:0}
 .toc{display:none;gap:2px;margin-left:8px}
 .toc a{padding:7px 10px;border-radius:8px;color:var(--muted);font:500 var(--fs-13)/1 var(--sans);text-decoration:none}
 @media (hover:hover){.toc a:hover{color:var(--ink);background:var(--surface-2)}}
 .toc a[aria-current=true]{color:var(--accent);background:var(--accent-soft)}
 /* the section list needs about 1100px with a classic scrollbar; below that the bar keeps only its actions */
 @media (min-width:1100px){.toc{display:flex}}
-@media (min-width:1024px) and (max-width:1279px){.ver{display:none}.toc a{padding:7px 7px}.pages .lbl-t{display:none}.pages .tb{width:30px;padding:0}}
+@media (min-width:1024px) and (max-width:1279px){.toc a{padding:7px 7px}.pages .lbl-t{display:none}.pages .tb{width:30px;padding:0}}
 .acts{display:flex;align-items:center;gap:8px;margin-left:auto}
 .tray{display:inline-flex;align-items:center;gap:2px;flex:none;padding:3px;border:1px solid var(--line);border-radius:11px;background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
 .tb{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;min-width:30px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 var(--fs-13)/1 var(--sans);text-decoration:none;cursor:pointer;white-space:nowrap}
@@ -80,19 +79,14 @@ p{margin:0 0 12px;max-width:var(--measure);color:var(--ink-2);text-wrap:pretty}
   .sh>.lead{grid-column:2;grid-row:2;padding:6px 0 0 24px;border-left:2px solid var(--accent-soft)}
   .hh{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);column-gap:clamp(40px,5vw,80px);align-items:end}
   .hh h1{max-width:none;margin-bottom:0}
-  .hh .lede{margin:0 0 6px}
 }
 
 
 /* hero */
 .hero{position:relative;isolation:isolate;padding-top:clamp(40px,7vw,96px)}
 .hero::before{content:"";position:absolute;inset:0 0 auto;height:640px;z-index:-1;background-image:radial-gradient(var(--dot) 1.1px,transparent 1.3px);background-size:18px 18px;-webkit-mask-image:linear-gradient(#000 20%,transparent 85%);mask-image:linear-gradient(#000 20%,transparent 85%)}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0;padding:6px 12px 6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font:500 var(--fs-12_5)/1 var(--mono);color:var(--ink-2);box-shadow:var(--shadow-1)}
-.eyebrow .dots{display:inline-flex;gap:3px}
-.eyebrow .dots i{width:7px;height:7px;border-radius:50%;background:var(--x)}
 h1{font-size:clamp(2.25rem,5.6vw,4.5rem);line-height:1;letter-spacing:-.045em;margin:22px 0 20px;max-width:17ch;text-wrap:balance}
 h1 em{font-style:normal;color:var(--accent)}
-.lede{font-size:clamp(1.0625rem,1.5vw,1.3125rem);line-height:1.5;max-width:52ch}
 
 /* code */
 pre.kdl{margin:0;padding:14px 16px;background:var(--surface);font-size:var(--fs-12_5);line-height:1.7;tab-size:4;-moz-tab-size:4;overflow-x:auto;color:var(--ink)}
@@ -100,8 +94,7 @@ pre.kdl .ln{border-radius:3px}
 pre.lines{counter-reset:l;padding-left:8px}
 pre.lines .ln::before{counter-increment:l;content:counter(l);display:inline-block;width:3ch;margin-right:2ch;text-align:right;color:var(--edge);-webkit-user-select:none;user-select:none}
 .pane-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);font:500 var(--fs-12)/1.4 var(--mono);color:var(--muted)}
-.pane-h .tag,.exbar .tag{padding:2px 7px;border-radius:999px;background:var(--line);color:var(--ink-2);font-size:var(--fs-11)}
-.pane-h .tag.intent,.exbar .tag.intent{background:var(--accent-soft);color:var(--accent)}
+.exbar .tag{padding:2px 7px;border-radius:999px;background:var(--line);color:var(--ink-2);font-size:var(--fs-11)}
 
 /* tables */
 .tw{overflow-x:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1)}
@@ -158,7 +151,7 @@ button.a{cursor:pointer}
 .exbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 10px 8px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
 .file{display:inline-flex;align-items:center;gap:8px;font:500 var(--fs-12_5)/1 var(--mono);color:var(--ink)}
 .file .g{color:var(--muted)}
-.exbar .hint{margin:0 0 0 auto;font-size:var(--fs-12_5);color:var(--muted)}
+.ex .cv>.hint{align-self:flex-end;margin:-16px 0 12px;font-size:var(--fs-12_5);color:var(--muted)}
 .who-l{font:500 var(--fs-12)/1 var(--sans);color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--x)}
 .tb .ct{font:500 var(--fs-11)/1 var(--mono);color:var(--muted)}
@@ -245,9 +238,6 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 .way-k::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--x);box-shadow:0 0 0 3px color-mix(in srgb,var(--x) 22%,transparent)}
 .way-h h3{font-size:clamp(1.25rem,1.9vw,1.6rem);line-height:1.2;letter-spacing:-.025em}
 .way-h p{margin:0;font-size:var(--fs-14);color:var(--ink-2)}
-.traits{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0;list-style:none}
-.traits li{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font:500 var(--fs-12)/1.4 var(--sans);color:var(--ink-2)}
-.traits li::before{content:"✓";font-weight:700;color:var(--x)}
 .mrows{display:grid;margin:0;padding:6px 0;list-style:none}
 .mrows li{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:12px 24px}
 .mrows li+li{border-top:1px dashed var(--line)}
@@ -263,7 +253,7 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 .term-h{display:flex;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--bg) 14%,transparent);font:500 var(--fs-11_5)/1 var(--mono);color:color-mix(in srgb,var(--bg) 78%,transparent)}
 .term-h i{width:9px;height:9px;border-radius:50%;background:color-mix(in srgb,var(--bg) 25%,transparent)}
 .term-h span{margin-left:6px}
-.term pre{margin:0;padding:12px 14px 14px;white-space:pre;overflow-x:auto;font-size:var(--fs-12_5);line-height:1.65;color:var(--bg)}
+.term pre{margin:0;padding:12px 14px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-12_5);line-height:1.65;color:var(--bg)}
 .term pre .p{color:color-mix(in srgb,var(--bg) 72%,transparent)}
 .term pre .ok{color:var(--code-soft)}
 .ways figcaption{grid-column:1/-1;font-size:var(--fs-13);color:var(--muted)}
@@ -300,15 +290,45 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 
 /* hero: the right column holds the next step, so it is not empty space */
 .hside{display:grid;gap:14px;align-content:end}
-.hside .lede{margin:0}
 .hside .cmd{margin:0}
-/* the napkin: three verbs say what a flow file is for; none says "run" */
-.napkin{display:grid;gap:8px;margin:0;padding:12px 14px;list-style:none;border:1.5px dashed var(--edge-2);border-radius:14px;background:color-mix(in srgb,var(--surface) 70%,transparent)}
-.napkin li{display:flex;align-items:center;gap:10px;font-size:var(--fs-14);color:var(--ink-2)}
-.napkin li>:first-child{flex:none;width:22px;display:flex;justify-content:center;color:var(--accent)}
-.napkin .g{width:16px;height:16px}
-.napkin .dots{display:inline-flex;gap:3px}.napkin .dots i{width:6px;height:6px;border-radius:50%;background:var(--x)}
-.napkin b{color:var(--ink);font-weight:650}
+/* a wide screen: the title, the one-line install, and the actions on the left; the spec diagram beside them, centred */
+.hmain .cmd{margin:24px 0 14px;max-width:34rem}
+@media (min-width:1024px){.hh{align-items:center}}
+/* Install: prose on the left; a terminal on the right, its tabs and Copy in the bar; a command breaks only at a slash or a space */
+.ig{display:grid;grid-template-columns:minmax(0,1fr);gap:20px 0}
+@media (min-width:1024px){.ig{grid-template-columns:minmax(0,4fr) minmax(0,7fr);column-gap:clamp(40px,5vw,72px);align-items:center}}
+.ig .sh{display:block}
+.ig .sh h2{margin:0 0 16px}
+.ig-t>p{font-size:var(--fs-17);line-height:1.6}
+.ig-t>p:last-child{margin:0}
+.iterm{min-width:0;border-radius:16px;background:color-mix(in srgb,var(--ink) 92%,var(--bg));color:var(--bg);box-shadow:var(--shadow-2);overflow:hidden}
+.iterm-h{display:flex;align-items:center;gap:12px;padding:0 12px 0 20px;border-bottom:1px solid color-mix(in srgb,var(--bg) 14%,transparent)}
+.itabs{display:flex;gap:22px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.itabs button{flex:none;padding:14px 0 12px;border:0;border-bottom:2px solid transparent;background:none;color:color-mix(in srgb,var(--bg) 62%,transparent);font:500 var(--fs-14)/1 var(--sans);cursor:pointer}
+@media (hover:hover){.itabs button:hover{color:var(--bg)}}
+.itabs button[aria-selected=true]{border-bottom-color:var(--accent-fill);color:var(--bg)}
+.itabs button:focus-visible{outline-color:var(--bg);outline-offset:-2px}
+.iterm-h .copy{margin-left:auto;flex:none;height:28px;background:color-mix(in srgb,var(--bg) 14%,transparent);color:var(--bg);font-size:var(--fs-12)}
+.iterm-h .copy:focus-visible{outline-color:var(--bg)}
+.iterm .tp{display:block}
+.iterm pre{margin:0;padding:18px 20px 20px;white-space:pre-wrap;overflow-wrap:normal;font:500 var(--fs-14)/1.75 var(--mono);color:var(--bg)}
+.iterm pre::before{content:"$ ";color:color-mix(in srgb,var(--bg) 60%,transparent)}
+/* the hero states the relation: the flow file is a spec, the skill implements it, and nothing executes it */
+.rel{display:grid;margin:0;padding:12px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--surface) 70%,transparent);box-shadow:var(--shadow-1)}
+.rel-r{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface)}
+.rel-r.spec{border:1.5px dashed var(--accent)}
+.rel-r.impl{border:1px solid var(--line-2)}
+.rel-r span{font-size:var(--fs-13_5);line-height:1.35;color:var(--muted)}
+.rel-r b{display:block;font-size:var(--fs-15);color:var(--ink);font-weight:650}
+.rel-r code{margin-left:auto;padding:3px 8px;border-radius:7px;background:var(--surface-2);font:600 var(--fs-12_5)/1.3 var(--mono);color:var(--ink);white-space:nowrap}
+.rel-r.spec code{background:var(--accent-soft);color:var(--accent)}
+.rel-e{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;padding:8px 0 8px 36px;font:500 var(--fs-12)/1.3 var(--mono)}
+.rel-e::before{content:"";position:absolute;left:24px;top:0;bottom:0;border-left:1.5px solid var(--edge-2)}
+.rel-e span{display:inline-flex;align-items:center;gap:6px}
+.rel-e .g{width:13px;height:13px}
+.rel-y{color:var(--ink-2)}
+.rel-n{padding:3px 9px;border-radius:999px;background:var(--fail-soft);color:var(--fail)}
+.rel figcaption{margin:10px 2px 0;font-size:var(--fs-13);color:var(--muted)}
 .ctas{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ghost{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);color:var(--ink);font:600 var(--fs-13_5)/1 var(--sans);text-decoration:none;white-space:nowrap;box-shadow:var(--shadow-1)}
 @media (hover:hover){.ghost:hover{border-color:var(--edge-2)}.ghost:hover .go{transform:translateX(2px)}}
@@ -316,7 +336,7 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 @media (min-width:1024px){.hh{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
 
 
-/* install: one card, three numbered columns of equal height (install, ask, run), and a footer row to the playground */
+/* the rows of "Use your flow" at the end of the Tutorial */
 .instf{margin:0}
 .inst{display:grid;grid-template-columns:minmax(0,1fr);margin:0;padding:0;list-style:none;counter-reset:t;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-1);overflow:hidden}
 /* one row per step: the step and what it is for on the left, the command on the right */
@@ -330,22 +350,27 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 .is-b{display:grid;gap:10px;min-width:0}
 .is-b>p{margin:0;font-size:var(--fs-13_5);color:var(--muted)}
 .is-b .tray{justify-self:start}
-/* step 2 is a chat message, so it looks like one: no prompt sign, no terminal */
-.say{display:flex;align-items:flex-end;gap:10px}
-.say-who{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--human-soft);color:var(--human);font:650 var(--fs-11)/1 var(--sans)}
+/* a chat message looks like one: no prompt sign, no terminal */
 .bubble{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border:1px solid var(--line-2);border-radius:16px 16px 16px 4px;background:var(--surface-2)}
 .bubble code{font:500 var(--fs-14)/1.4 var(--mono);color:var(--ink)}
 .bubble .tb{height:28px;font-size:var(--fs-12)}
+/* a message to the agent, and what the agent does with it */
+.asks{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;gap:8px 16px;margin:0;padding:0;list-style:none}
+.asks li{display:contents}
+.asks .bubble{justify-content:space-between}
+.asks .bubble code{white-space:nowrap}
+.asks li>span{font-size:var(--fs-14);color:var(--ink-2)}
+@media (max-width:640px){.asks{grid-template-columns:minmax(0,1fr);gap:4px}.asks li>span{margin-bottom:8px}}
 .tb[aria-selected=true],.tb[aria-selected=true]:hover{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgb(0 0 0 / .14),0 0 0 1px var(--line-2)}
 .tp{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
 /* with script, the panels share one grid cell: a tab switch does not change the height of the card */
 .tps{display:grid;min-width:0}.tps.js>.tp{grid-area:1/1}.tps.js>.tp[hidden]{display:grid!important;visibility:hidden}
 .tp p{margin:0;font-size:var(--fs-13_5);color:var(--muted)}
-.inst .cmd{margin:0;padding:10px 10px 10px 14px;align-items:center;border-radius:12px}
+:is(.inst,.hinst) .cmd{margin:0;padding:10px 10px 10px 14px;align-items:center;border-radius:12px}
 /* a long command wraps inside its column; it never scrolls sideways */
-.inst .cmd pre{white-space:pre-wrap;overflow-wrap:break-word;font-size:var(--fs-13_5);line-height:1.7}
+:is(.inst,.hinst) .cmd pre{white-space:pre-wrap;overflow-wrap:break-word;font-size:var(--fs-13_5);line-height:1.7}
 .nw{white-space:nowrap}
-.inst .cmd.ps pre::before{content:"$ ";color:color-mix(in srgb,var(--bg) 72%,transparent)}
+:is(.inst,.hinst) .cmd.ps pre::before{content:"$ ";color:color-mix(in srgb,var(--bg) 72%,transparent)}
 .is-f{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 22px;border-top:1px solid var(--line);background:var(--surface-2)}
 .is-f p{margin:0;font-size:var(--fs-14);color:var(--ink-2)}
 .is-f .ghost{margin-left:auto;height:34px}
@@ -470,6 +495,9 @@ pre.prose{margin:0;padding:14px 16px;font-size:var(--fs-12_5);line-height:1.7;wh
 .tnav button:disabled{opacity:.45;cursor:default;filter:none}
 .tdone{display:grid;gap:12px;padding:18px 20px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:14px;background:var(--accent-soft)}
 .tdone p{margin:0;color:var(--ink)}
+/* after the steps: how to use a flow, in the rows of the Install card */
+.use{margin-top:clamp(28px,4vw,48px)}
+.use-h{margin:0 0 14px;font-size:clamp(1.25rem,1.9vw,1.6rem);line-height:1.2;letter-spacing:-.025em}
 
 /* the GitHub mark reads at 18px */
 .pages .g{width:18px;height:18px}
@@ -481,7 +509,7 @@ footer a{margin-left:auto;color:var(--muted)}
 </head>
 <body>
 <header class="top"><div class="wrap bar">
-<a class="brand" href="#what"><span class="mark"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h4v3H3zM9 10.5h4v3H9zM5 5.5V8h6v2.5"/></svg></span>SkillFlow <span class="ver"><!--version--></span></a>
+<a class="brand" href="#what"><span class="mark"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h4v3H3zM9 10.5h4v3H9zM5 5.5V8h6v2.5"/></svg></span>SkillFlow</a>
 <nav class="toc" aria-label="Sections"><a href="#why">Why</a><a href="#modes">Modes</a><a href="#start">Install</a><a href="#tutorial">Tutorial</a><a href="#playground">Playground</a><a href="#principles">Principles</a><a href="#language">Language</a><a href="#kdl">KDL</a><a href="#licenses">Licenses</a></nav>
 <div class="acts">
 <div class="tray theme" role="group" aria-label="Theme" hidden>
@@ -499,29 +527,28 @@ footer a{margin-left:auto;color:var(--muted)}
 <main>
 
 <section id="what" class="hero" aria-labelledby="what-h"><div class="wrap">
-<div class="hh"><div><p class="eyebrow"><span class="dots" aria-hidden="true"><i class="llm"></i><i class="code"></i><i class="human"></i></span>Intent-driven DSL · KDL 2.0</p>
-<h1 id="what-h">A declarative language for the <em>intent</em> of an agent skill.</h1></div>
-<div class="hside"><p class="lede">A flow file sketches a skill, like a flow drawn on a napkin. <strong>Nothing executes it:</strong> the skill implements it.</p>
-<ul class="napkin">
-<li><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13l1-3.5L10.5 3 13 5.5 6.5 12zM9 4.5 11.5 7"/></svg><span><b>Sketch</b> the steps and branches</span></li>
-<li><span class="dots" aria-hidden="true"><i class="llm"></i><i class="code"></i><i class="human"></i></span><span><b>Name</b> who acts: model, code, or you</span></li>
-<li><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>Check</b> the skill against the sketch</span></li>
-</ul>
+<div class="hh"><div class="hmain"><h1 id="what-h">A non-executable <em>intent</em> spec for agent skill workflows.</h1>
 <div class="cmd"><pre><code>npx skills add skovtunenko/skillflow</code></pre><button type="button" class="tb copy">Copy</button></div>
-<div class="ctas"><a class="primary" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a><a class="ghost" href="#start">Other ways to install</a></div></div></div>
+<div class="ctas"><a class="primary" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a><a class="ghost" href="#start">Other ways to install</a></div></div>
+<div class="hside"><figure class="rel" aria-label="A flow file is a specification: the skill implements it, and nothing executes it">
+<div class="rel-r spec"><span><b>Intent spec</b>steps, branches, and who acts</span><code>flow.kdl</code></div>
+<div class="rel-e"><span class="rel-y"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5v-11M4 6.5l4-4 4 4"/></svg>the skill implements it</span><span class="rel-n"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>no runtime executes it</span></div>
+<div class="rel-r impl"><span><b>Skill</b>your agent runs it</span><code>SKILL.md · scripts/</code></div>
+<figcaption><code>skillflow check</code> finds where the skill and its spec differ.</figcaption>
+</figure>
+</div></div>
 <figure class="ex" id="assembled" data-pair aria-label="A flow file and its graph">
 <div class="exbar">
-<span class="file"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>release-notes.kdl</span><span class="tag intent">intent · not executed</span>
+<span class="file"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>release-notes.kdl</span>
 <div class="tray" role="group" aria-label="Show the steps of one executor">
 <button type="button" class="tb llm" data-by="llm" aria-pressed="false"><span class="dot" aria-hidden="true"></span>LLM <span class="ct"></span></button>
 <button type="button" class="tb code" data-by="code" aria-pressed="false"><span class="dot" aria-hidden="true"></span>code <span class="ct"></span></button>
 <button type="button" class="tb human" data-by="human" aria-pressed="false"><span class="dot" aria-hidden="true"></span>human <span class="ct"></span></button>
 </div>
-<p class="hint">Select a node or a line to see its pair.</p>
 </div>
 <div class="split">
 <div class="src"><pre class="kdl lines" tabindex="0" aria-label="Flow file release-notes.kdl"><code><!--flow-pair:release-notes--></code></pre></div>
-<div class="cv"><!--graph-pair:release-notes--></div>
+<div class="cv"><p class="hint">Select a node to see its pair.</p><!--graph-pair:release-notes--></div>
 </div>
 </figure>
 </div></section>
@@ -553,11 +580,11 @@ footer a{margin-left:auto;color:var(--muted)}
 </figure>
 
 <div class="pair">
-<div><div class="pane-h">SKILL.md<span class="tag">prose</span></div><pre class="prose" tabindex="0" aria-label="Part of a SKILL.md file">Run `scripts/collect.sh &lt;tag&gt;`. If it exits with a non-zero code, the tag does not exist: tell the user and stop.
+<div><div class="pane-h">SKILL.md</div><pre class="prose" tabindex="0" aria-label="Part of a SKILL.md file">Run `scripts/collect.sh &lt;tag&gt;`. If it exits with a non-zero code, the tag does not exist: tell the user and stop.
 
 Load the style-guide skill. Group the changes by type: features first, then fixes.</pre></div>
 <div class="to" aria-hidden="true"><span><svg class="g" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></div>
-<div><div class="pane-h">flow.kdl<span class="tag intent">intent</span></div><pre class="kdl" tabindex="0" aria-label="The same part as a flow"><code><!--flow-body:why--></code></pre></div>
+<div><div class="pane-h">flow.kdl</div><pre class="kdl" tabindex="0" aria-label="The same part as a flow"><code><!--flow-body:why--></code></pre></div>
 </div>
 <figure class="ce" aria-label="Why a flow writes skill= on a step">
 <div class="ce-c"><span class="ce-k"><b>1</b>A model cannot unload text</span><p>Text that enters the context stays there until the session resets or the conversation is compacted.</p></div>
@@ -569,12 +596,11 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 <section id="modes" aria-labelledby="modes-h"><div class="wrap">
 <div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="modes-h">Modes</h2>
-<div class="lead"><p><strong>Two ways to work with a flow: your agent, or a script.</strong> A mode needs judgment, so your agent runs it as a skill. A command needs none, so the same flow always gives the same result.</p></div></div>
+<div class="lead"><p><strong>Tokens go only to the modes that need judgment.</strong> Your agent runs them as a skill. Drawing the graph and editing the flow by hand run as a script: the same flow gives the same result, with no tokens.</p></div></div>
 <figure class="ways" aria-label="Modes that an agent runs, and commands that a person runs">
 <div class="way llm">
 <div class="way-h"><span class="way-k">by=llm</span><h3>Say a mode to your agent</h3>
-<p>SkillFlow is a skill. The model reads the skill and its flow and judges what differs. In sync it asks you which side wins.</p>
-<ul class="traits"><li>needs an agent</li><li>reads and judges</li><li>you pick what wins</li></ul></div>
+<p>SkillFlow is a skill. The model reads the skill and its flow and judges what differs, so each mode spends tokens. In sync it asks you which side wins.</p></div>
 <ol class="mrows">
 <li><code>skillflow reverse</code><span class="mu">a skill that has no flow file, or a skill that moved ahead of its flow</span><span class="mt"><b>truth</b>the skill, as it works now</span><span class="mt"><b>gives</b>a flow file</span></li>
 <li><code>skillflow author</code><span class="mu">a flow for a new skill, or a flow edited in dialogue</span><span class="mt"><b>truth</b>your documents and answers</span><span class="mt"><b>gives</b>a new or edited flow file</span></li>
@@ -585,8 +611,7 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 </ol></div>
 <div class="way code">
 <div class="way-h"><span class="way-k">by=code</span><h3>Run a command yourself</h3>
-<p><code>skillflowctl</code> is a script in the skill folder. No model, no network: the same flow gives the same output.</p>
-<ul class="traits"><li>deterministic</li><li>no agent</li><li>Node.js only</li></ul></div>
+<p><code>skillflowctl</code> is a script in the skill folder. No model, no network, no tokens: the same flow gives the same output.</p></div>
 <ol class="mrows">
 <li><code>page</code><span class="mu">formats and validates the flow, then writes its HTML page</span></li>
 <li><code>lint</code><span class="mu">checks the format and validates the flow; writes nothing</span></li>
@@ -599,38 +624,24 @@ Load the style-guide skill. Group the changes by type: features first, then fixe
 </figure>
 </div></section>
 
-<section id="start" aria-labelledby="start-h"><div class="wrap">
-<div class="sh"><span class="num" aria-hidden="true"></span>
-<h2 id="start-h">Install</h2>
-<div class="lead"><p><strong>Needs Node.js 22 or later.</strong> No packages, no network access.</p></div></div>
-<figure class="instf" aria-label="Three steps: install, ask your agent, or run the script">
-<ol class="inst">
-<li class="is"><div class="is-h"><h3>Install the skill</h3><p>Into the skills folder of your agent.</p></div>
-<div class="is-b"><div class="tray" role="tablist" aria-label="Ways to install">
-<button type="button" class="tb" role="tab" id="t-cli" aria-controls="p-cli" aria-selected="true">skills CLI</button>
-<button type="button" class="tb" role="tab" id="t-kst" aria-controls="p-kst" aria-selected="false" tabindex="-1">kasetto</button>
-<button type="button" class="tb" role="tab" id="t-hand" aria-controls="p-hand" aria-selected="false" tabindex="-1">By hand</button>
+<section id="start" aria-labelledby="start-h"><div class="wrap ig">
+<div class="ig-t"><div class="sh"><span class="num" aria-hidden="true"></span>
+<h2 id="start-h">Install</h2></div>
+<p>Adds SkillFlow to Claude Code, Codex, Cursor, and more, through <a href="https://skills.sh/" rel="noreferrer">skills.sh</a> or <a href="https://www.kasetto.dev/" rel="noreferrer">kasetto</a>. Needs Node.js 22 or later.</p>
+<p>Then type <code>skillflow help</code> in your agent.</p></div>
+<div class="iterm" role="group" aria-label="Install commands">
+<div class="iterm-h"><div class="itabs" role="tablist" aria-label="Ways to install"><button type="button" role="tab" id="t-cli" aria-controls="p-cli" aria-selected="true">skills CLI</button><button type="button" role="tab" id="t-kst" aria-controls="p-kst" aria-selected="false" tabindex="-1">kasetto</button><button type="button" role="tab" id="t-hand" aria-controls="p-hand" aria-selected="false" tabindex="-1">by hand</button></div><button type="button" class="tb copy" data-copy="tab">Copy</button></div>
+<div class="tps"><div class="tp" role="tabpanel" id="p-cli" aria-labelledby="t-cli"><pre><code>npx skills add skovtunenko/<wbr>skillflow</code></pre></div>
+<div class="tp" role="tabpanel" id="p-kst" aria-labelledby="t-kst"><pre><code>kst add https://<wbr>github.com/<wbr>skovtunenko/<wbr>skillflow --skill skillflow --project</code></pre></div>
+<div class="tp" role="tabpanel" id="p-hand" aria-labelledby="t-hand"><pre><code>git clone https://<wbr>github.com/<wbr>skovtunenko/<wbr>skillflow
+cp -R skillflow/<wbr>skills/<wbr>skillflow <span class="nw">&lt;skills-folder&gt;</span>/</code></pre></div></div>
 </div>
-<div class="tps"><div class="tp" role="tabpanel" id="p-cli" aria-labelledby="t-cli"><div class="cmd ps"><pre><code>npx skills add skovtunenko/<wbr>skillflow</code></pre><button type="button" class="tb copy">Copy</button></div><p>Claude Code, Codex, Cursor, and more, through <a href="https://skills.sh/" rel="noreferrer">skills.sh</a>.</p></div>
-<div class="tp" role="tabpanel" id="p-kst" aria-labelledby="t-kst"><div class="cmd ps"><pre><code>kst add https://<wbr>github.com/<wbr>skovtunenko/<wbr>skillflow --skill skillflow --project</code></pre><button type="button" class="tb copy">Copy</button></div><p>Through <a href="https://www.kasetto.dev/" rel="noreferrer">kasetto</a>.</p></div>
-<div class="tp" role="tabpanel" id="p-hand" aria-labelledby="t-hand"><div class="cmd ps"><pre><code>git clone https://<wbr>github.com/<wbr>skovtunenko/<wbr>skillflow
-cp -R skillflow/<wbr>skills/<wbr>skillflow <span class="nw">&lt;skills-folder&gt;</span>/</code></pre><button type="button" class="tb copy">Copy</button></div><p>A plain copy of the folder.</p></div></div></div>
-</li>
-<li class="is"><div class="is-h"><h3>Ask your agent</h3><p>In the chat, not in a terminal: SkillFlow is a skill.</p></div>
-<div class="is-b"><div class="say" role="group" aria-label="A message to your agent"><span class="say-who" aria-hidden="true">you</span><div class="bubble"><code>skillflow help</code><button type="button" class="tb copy">Copy</button></div></div><p>Other <a href="#modes">modes</a>: <code>skillflow reverse my-skill</code>, <code>skillflow check my-skill</code>.</p></div></li>
-<li class="is"><div class="is-h"><h3>Or run it yourself</h3><p>A script in the skill folder. No agent.</p></div>
-<div class="is-b"><div class="cmd ps"><pre><code>.claude/<wbr>skills/<wbr>skillflow/<wbr>skillflowctl page my-skill</code></pre><button type="button" class="tb copy">Copy</button></div><p>The path of a project install in Claude Code; another agent has its own skills folder. With no command, a menu.</p></div></li>
-<li class="is-f"><p>No install? Try the Playground.</p><a class="ghost" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></li>
-</ol>
-</figure>
-
-<p class="sr" aria-live="polite" id="said"></p>
 </div></section>
 
 <section id="tutorial" aria-labelledby="tutorial-h"><div class="wrap">
 <div class="sh"><span class="num" aria-hidden="true"></span>
 <h2 id="tutorial-h">Tutorial</h2>
-<div class="lead"><p><strong>From one step to the flow at the top of the page.</strong> Each step adds one construct and marks the lines and cards that it changed.</p></div></div>
+<div class="lead"><p><strong>Write a flow step by step, then use it.</strong> Each step adds one construct and marks the lines and cards that it changed.</p></div></div>
 <figure class="tut" aria-label="Tutorial: a flow in <!--steps--> steps">
 <!--tutorial-rail-->
 <div class="tnav" hidden><span class="tbar" aria-hidden="true"><i></i></span><span class="tpos sr" aria-live="polite"></span><button type="button" class="ghost" data-go="-1"><svg class="g" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg>Back</button><button type="button" class="primary" data-go="1">Next<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button></div>
@@ -638,6 +649,19 @@ cp -R skillflow/<wbr>skills/<wbr>skillflow <span class="nw">&lt;skills-folder&gt
 </figure>
 <div class="tdone"><p>This is the flow at the top of the page. Change it in the Playground, or read how to write a good flow.</p>
 <div class="ctas"><a class="primary" href="#playground">Open the Playground<svg class="g go" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a><a class="ghost" href="play/#h-best" data-help="h-best">Best practices</a></div></div>
+<figure class="instf use" aria-labelledby="use-h">
+<h3 id="use-h" class="use-h">Use your flow</h3>
+<ol class="inst">
+<li class="is"><div class="is-h"><h3>Ask your agent</h3><p>In the chat, not in a terminal: SkillFlow is a skill.</p></div>
+<div class="is-b"><ul class="asks" aria-label="Messages to your agent, and what it does">
+<li><div class="bubble"><code>skillflow reverse my-skill</code><button type="button" class="tb copy">Copy</button></div><span>Your agent reads the skill and writes its flow file.</span></li>
+<li><div class="bubble"><code>skillflow check my-skill</code><button type="button" class="tb copy">Copy</button></div><span>It reports where the skill no longer matches its flow.</span></li>
+<li><div class="bubble"><code>skillflow help</code><button type="button" class="tb copy">Copy</button></div><span>It answers how to use SkillFlow and how to write a flow.</span></li>
+</ul><p>Each message spends model tokens. All <a href="#modes">modes</a>.</p></div></li>
+<li class="is"><div class="is-h"><h3>Or run it yourself</h3><p>A script in the skill folder. No agent, no tokens.</p></div>
+<div class="is-b"><div class="cmd ps"><pre><code>.claude/<wbr>skills/<wbr>skillflow/<wbr>skillflowctl page my-skill</code></pre><button type="button" class="tb copy">Copy</button></div><p>Claude Code keeps the skills of a project in <code>.claude/skills</code>; another agent uses its own folder. With no command, the script shows a menu.</p></div></li>
+</ol>
+</figure>
 </div></section>
 
 <section id="playground" aria-labelledby="playground-h"><div class="wrap">
@@ -695,9 +719,9 @@ cp -R skillflow/<wbr>skills/<wbr>skillflow <span class="nw">&lt;skills-folder&gt
 <figure class="cv" aria-hidden="true"><!--graph:gate--></figure>
 <pre class="kdl" tabindex="0" aria-label="gate example"><code><!--flow-body:gate--></code></pre></article>
 
-<article class="tile"><div><h3><code>on-fail</code></h3><p>What happens when a step fails.</p></div>
-<figure class="cv" aria-hidden="true"><!--graph:on-fail--></figure>
-<pre class="kdl" tabindex="0" aria-label="on-fail example"><code><!--flow-body:on-fail--></code></pre></article>
+<article class="tile"><div><h3><code>catch</code></h3><p>What happens when a step fails.</p></div>
+<figure class="cv" aria-hidden="true"><!--graph:catch--></figure>
+<pre class="kdl" tabindex="0" aria-label="catch example"><code><!--flow-body:catch--></code></pre></article>
 
 <article class="tile"><div><h3><code>end</code></h3><p>An early exit: the flow stops here.</p></div>
 <figure class="cv" aria-hidden="true"><!--graph:end--></figure>
@@ -744,6 +768,7 @@ cp -R skillflow/<wbr>skills/<wbr>skillflow <span class="nw">&lt;skills-folder&gt
 </div></section>
 
 
+<p class="sr" aria-live="polite" id="said"></p>
 </main>
 <footer><div class="wrap"><span>SkillFlow <!--version--></span><span>MIT License</span><a href="#what">Back to top ↑</a></div></footer>
 <script>
@@ -770,7 +795,7 @@ const spy = new IntersectionObserver((entries) => {
 for (const s of document.querySelectorAll("main section[id]")) spy.observe(s);
 
 // install tabs: without script every panel shows; arrow keys move between tabs
-const tabs = [...document.querySelectorAll('.inst [role="tab"]')];
+const tabs = [...document.querySelectorAll('.iterm [role="tab"]')];
 const pick = (tab) => {
   for (const t of tabs) {
     const on = t === tab;
@@ -793,9 +818,10 @@ if (tabs.length) pick(tabs[0]);
 
 const said = document.getElementById("said");
 for (const b of document.querySelectorAll("button.copy")) b.addEventListener("click", async () => {
-  const text = b.previousElementSibling.textContent;
+  // the Install terminal has one Copy in its bar: it copies the command of the open tab
+  const src = b.dataset.copy === "tab" ? b.closest(".iterm").querySelector(".tp:not([hidden]) pre") : b.previousElementSibling, text = src.textContent;
   try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; said.textContent = "Copied to the clipboard."; }
-  catch { getSelection().selectAllChildren(b.previousElementSibling); b.textContent = "Select it"; said.textContent = "The browser did not allow a copy. Select the text and copy it."; }
+  catch { getSelection().selectAllChildren(src); b.textContent = "Select it"; said.textContent = "The browser did not allow a copy. Select the text and copy it."; }
   setTimeout(() => { b.textContent = "Copy"; }, 1600);
 });
 

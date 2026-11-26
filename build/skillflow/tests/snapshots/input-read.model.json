@@ -44,7 +44,7 @@
     "ghost"
    ],
    "outputs": [],
-   "onfail": null
+   "catch": null
   }
  ],
  "data": {

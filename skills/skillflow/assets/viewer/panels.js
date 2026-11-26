@@ -85,7 +85,7 @@
   }
   function nodePanel(n) {
     ptitle.textContent = title(n); ptitle.className = n.name ? 'idt' : '';
-    var KIND = { step: ['step', 'step'], decide: ['decision', 'decide'], gate: ['approval gate', 'gate'], end: ['end', 'end'], phase: ['phase', 'phase'], onfail: ['on fail', 'fail'] };
+    var KIND = { step: ['step', 'step'], decide: ['decision', 'decide'], gate: ['approval gate', 'gate'], end: ['end', 'end'], phase: ['phase', 'phase'], catch: ['catch', 'fail'] };
     var parts = [kindRow(KIND[n.kind][0], KIND[n.kind][1], n.by)];
     if ((n.kind === 'decide' || n.kind === 'gate') && n.question) parts.push(inline(el('p', 'pq'), plain(n.question)));
     parts.push(rich(n.prose || n.text));
@@ -97,7 +97,7 @@
         state.override[n.id] = !isCollapsed(n); relayout(); renderPanel();
       })));
     }
-    if (n.kind === 'onfail') {
+    if (n.kind === 'catch') {
       parts.push(grp('Fails at', null, nodeLinks([n.step])));
       parts.push(grp('Then', null, el('p', 'desc', n.ends ? 'The flow ends on this path.' : 'The flow continues after ' + title(byId[n.step]) + '.')));
     }
@@ -144,13 +144,13 @@
       });
       parts.push(grp('Outcomes', 'decide', ul));
     }
-    if (n.onfail) {
-      var f = n.onfail, box = el('div');
+    if (n.catch) {
+      var f = n.catch, box = el('div');
       if (f.prose) box.appendChild(rich(f.prose));
       box.appendChild(el('p', 'desc', f.ends ? 'The flow ends on failure. ' : 'The flow continues after this step. '));
       var restored = chips(f.outputs, dataChip); if (restored) box.appendChild(restored);
-      box.appendChild(nodeLink(f.id, footnoted(f) ? 'Open the on-fail (details, comments)' : 'Go to the on-fail path'));
-      parts.push(grp('On fail', 'fail', box));
+      box.appendChild(nodeLink(f.id, footnoted(f) ? 'Open the catch (details, comments)' : 'Go to the catch path'));
+      parts.push(grp('Catch', 'fail', box));
     }
     parts.push(grp('Unclear', 'ask', asks(n.unclear)));
     if (n._anchor) parts.push(commentGrp(anchors[n._anchor]));
@@ -225,7 +225,7 @@
     parts.push(add(el('div', 'sacts'), tipped(button('btn', [glyph('fit'), 'Fit in view'], function () { frameStation(i, true); }), 'Zoom the graph so this stop fits')));
     var ol = el('ol', 'scards');
     st.cards.forEach(function (id) {
-      var c = byId[id], g = c.kind === 'onfail' ? 'fail' : c.kind;
+      var c = byId[id], g = c.kind === 'catch' ? 'fail' : c.kind;
       var row = item(g, c.kind === 'end' ? 'end' : title(c), firstLine(c.kind === 'end' ? c.text : c.question || c.prose), function () { reveal(id); go({ kind: 'node', id: id }); });
       row.classList.add('k-' + c.kind);
       if (EXEC[c.by]) row.querySelector('.t').appendChild(execChip(c.by));
@@ -386,7 +386,7 @@
     order.forEach(function (key) {
       var xs = groups[key], first = xs[0], t = first.r.anchor ? anchors[first.r.anchor] : null, lost = first.r.status === 'lost';
       var label = t ? targetLabel(t) : commentPlace(first.c), kind = t ? t.kind : first.c.kind;
-      var g = { step: 'step', decide: 'decide', gate: 'gate', end: 'end', phase: 'phase', 'on-fail': 'fail', invariant: 'lock' }[kind] || 'source';
+      var g = { step: 'step', decide: 'decide', gate: 'gate', end: 'end', phase: 'phase', 'catch': 'fail', invariant: 'lock' }[kind] || 'source';
       var head = lost ? add(el('div', 'rvplace lost'), glyph(g), el('span', 'nm', label), el('span', 'go', 'not in this page'))
         : button('rvplace', [glyph(g), el('span', 'nm', label), el('span', 'go', '→')], function () { if (t) { showView('graph'); openTarget(t); } else showComment(first.c); }, 'Go to ' + label);
       var rows = el('div', 'cmts');

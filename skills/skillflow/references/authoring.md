@@ -27,7 +27,7 @@ the skeleton. Everything else is prose or stays only in the skill.
   A mapping table stays prose in the step that uses it; a rule list that sends
   each item to one of several places is a mapping table, not a `decide`. A
   `decide` is one choice per run; a flag set from facts already known is an
-  `output` of the step that knows them. A step's fallback is its `on-fail`.
+  `output` of the step that knows them. A step's fallback is its `catch`.
   Consecutive `by=llm` actions stay one step unless data a reviewer would
   notice lies between them. A script of the skill is a `step by=code
   file="scripts/x.py"` when it is a fixed command whose result needs no
@@ -74,7 +74,7 @@ the skeleton. Everything else is prose or stays only in the skill.
   A condition that changes the form of the result (an empty or no-change
   result, a mode without a missing tool, a confirmed finding that stays
   against a failed check) is not a detail: name the condition and the form in
-  the prose of the node that makes the result, or in the `on-fail` item when
+  the prose of the node that makes the result, or in the `catch` item when
   a failure is the cause.
 - **What the human does.** The flow waits for the human in three shapes:
   - approval of content the flow has shown: a `gate`;
@@ -120,29 +120,29 @@ the skeleton. Everything else is prose or stays only in the skill.
   step is a few words of that step's prose. A step that guards a write (a
   registration, a check, a backup) comes before the step that writes.
   Each cause of failure that the skill handles differently gets its own
-  `on-fail` prose; name where the flow goes next. A rule that the skill gives
+  `catch` prose; name where the flow goes next. A rule that the skill gives
   for every failure (what to report, what to stop, what to mark), and a
   failure that several steps handle the same way (one error of a script that
   many steps run), is one `invariant` with its conditions, such as "when the
   documented diagnostics do not resolve it"; name the script in it. Do not
-  repeat that handling in the `on-fail` of each step: an `on-fail` holds only
+  repeat that handling in the `catch` of each step: a `catch` holds only
   the failures that are its step's own, and a step with none has no
-  `on-fail`. The validator warns when three or more `on-fail` blocks hold
-  only an `end` with the same reason. A `step` inside `on-fail`
+  `catch`. The validator warns when three or more `catch` blocks hold
+  only an `end` with the same reason. A `step` inside `catch`
   appears only for work by another executor or an ask of the human, never to
   hold failure prose. The `rules` failure lines
   of a script that a step runs, and an unavailable tool the step uses, are
-  covered by that step's `on-fail` or by such an `invariant`: one sentence for the failures that go to
+  covered by that step's `catch` or by such an `invariant`: one sentence for the failures that go to
   the same place, and an item for each one whose next node or `end` differs.
   "Report the blocker" alone names no target: add "then continue" or "then
   end"; when the skill does not say which, add a ❓. This covers each step that runs a
   script, whatever its executor and also when the script
   appears only in its prose. Copy every condition of an exit into its item. When
-  every item stops the flow, the `on-fail` holds an `end`. When some items
-  continue and others stop, the `on-fail` holds a `decide` on the condition
+  every item stops the flow, the `catch` holds an `end`. When some items
+  continue and others stop, the `catch` holds a `decide` on the condition
   that separates them, with an `end` in the `when` of each item that stops;
   the items that continue stay prose:
-  `on-fail "Bun is missing." { decide sandbox "Is this a cloud sandbox?"
+  `catch "Bun is missing." { decide sandbox "Is this a cloud sandbox?"
   by=llm { when no { end "ask the user to install Bun" } } }`. A failure of an action inside a gate's review round is an item of the
   gate's prose list instead.
 - **Prose.** Write prose in ASD-STE100 with given-new flow (topic sentence

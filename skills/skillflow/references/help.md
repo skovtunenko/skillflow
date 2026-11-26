@@ -207,7 +207,7 @@ arrow at that edge moves the line.
 **Scenario**, first in the graph toolbar and at the top of the overview,
 shows one run of the flow as a numbered list, grouped by Route stop under the
 stop number and name. Each decision, gate, and step
-with an `on-fail` on the run offers its outcomes; the default is the first
+with a `catch` on the run offers its outcomes; the default is the first
 outcome that goes on. Above the list, a strip shows each step of the run as
 one segment coloured by who acts, with a gap between Route stops; one line
 counts the steps, the times the skill asks the user, and the repeats from
@@ -239,7 +239,7 @@ panel previews its highlight in the graph. The keyboard button at the top
 right, or the key `?`, opens the keyboard shortcuts, with the group of the
 current view first; while the card is open, a key lights its row and runs
 nothing. **Failures** shows how many
-short `on-fail` lines it can draw as cards of their own: one with prose only,
+short `catch` lines it can draw as cards of their own: one with prose only,
 or one whose only card is an `end`, which the step's card shows as a stop.
 In Source, a string or a comment of several lines, and a run of three or more
 `//` lines, folds to its first line; **Fold prose** folds all of them, so the
@@ -337,19 +337,19 @@ every construct is defined in [grammar.md](grammar.md).
    }
    ```
 
-6. **Failures.** `on-fail` sits inside the step that can fail.
+6. **Failures.** `catch` sits inside the step that can fail.
 
    ```kdl
    step publish by=code {
-       on-fail {
+       catch {
            end "show the error; CHANGELOG.md stays unchanged"
        }
    }
    ```
 
-   A retry is prose only: `on-fail "fix the reported lines and run again"`.
+   A retry is prose only: `catch "fix the reported lines and run again"`.
    When the recovery restores the step's data, say so with `output`:
-   `on-fail "retry twice, then use the cached report" { output report }`.
+   `catch "retry twice, then use the cached report" { output report }`.
 
 7. **Unclear places.** When the skill is ambiguous, say so on the line before
    the node: `// ? how many revision rounds are allowed (SKILL.md:24)`.
@@ -418,11 +418,11 @@ characters), or one list of at most five items.
 | `input … exists already: reading is prose` (warning) | drop the line and say in the node's prose what it reads; a node `input` names only what the skill asks the user for |
 | `the flow without its` … `lines has` … `characters; the limit is` (warning) | cut about the number of characters it gives, starting with the longest prose its hint names; keep each node's intent, details stay in the skill |
 | `prose of … is long` (warning) | keep the intent; leave details and result rules in the skill |
-| `… has failure messages, but the step has no on-fail` (warning) | add an `on-fail` item for each failure the skill handles, with its next node or `end`; a failure that several steps share is one `invariant` that names the script |
-| `… on-fail blocks … end the flow with the same reason` (warning) | write one `invariant` that says where this failure goes and names the scripts in the hint, then delete those `on-fail` blocks |
-| `on-fail holds an end, but its prose says the flow continues` (warning) | put the `end` in a `decide` on the condition that separates stopping items from continuing ones |
-| `every item of on-fail stops the flow, but it holds no end` (warning) | add `end "reason"` inside the `on-fail` |
-| `… exists only when step … succeeds` (warning) | the `on-fail` continues without that data: add `output <name>` to it when the recovery restores the data, or `end` it |
+| `… has failure messages, but the step has no catch` (warning) | add a `catch` item for each failure the skill handles, with its next node or `end`; a failure that several steps share is one `invariant` that names the script |
+| `… catch blocks … end the flow with the same reason` (warning) | write one `invariant` that says where this failure goes and names the scripts in the hint, then delete those `catch` blocks |
+| `catch holds an end, but its prose says the flow continues` (warning) | put the `end` in a `decide` on the condition that separates stopping items from continuing ones |
+| `every item of catch stops the flow, but it holds no end` (warning) | add `end "reason"` inside the `catch` |
+| `… exists only when step … succeeds` (warning) | the `catch` continues without that data: add `output <name>` to it when the recovery restores the data, or `end` it |
 | `ref … is already used` | one skill label links one element: keep it on the element that matches the label |
 | `ref must be a quoted label` | write `ref="S3"` with quotes, on one line |
 | `ref … has no defining place in the skill` (warning) | copy the label as the skill writes it at a heading, a first table cell, a list item, or a bold label; or drop the ref |

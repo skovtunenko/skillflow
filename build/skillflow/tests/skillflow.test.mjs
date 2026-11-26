@@ -110,9 +110,9 @@ describe("CheckTest", () => {
     for (const key of new Set(Object.values(PROPS).flat())) has(new RegExp(`\\s${key}=`), `property ${key}`);
     for (const who of EXECUTORS) for (const node of ["step", "invariant"]) has(new RegExp(`^\\s*${node}\\b.*\\sby=${who}\\b`, "m"), `${node} by=${who}`);
     for (const kind of TOOL_KINDS) has(new RegExp(`^\\s*tools\\b.*\\(${kind}\\)`, "m"), `tool kind ${kind}`);
-    // the forms of a string and of a comment, and each form of `when` and `on-fail`
+    // the forms of a string and of a comment, and each form of `when` and `catch`
     for (const [pattern, what] of [[/"""\n/, 'multi-line string'], [/#"/, "raw string"], [/^\s*\/\/ \?/m, "// ? line"], [/^\s*\/\/ [^?]/m, "// comment"], [/\/\*/, "/* */ comment"], [/^\s*\/-/m, "/- node"],
-      [/^\s*when \S+ "/m, "when with prose"], [/^\s*when \S+ \{/m, "when with a block"], [/^\s*on-fail "/m, "on-fail with prose"], [/^\s*on-fail \{/m, "on-fail with a block"],
+      [/^\s*when \S+ "/m, "when with prose"], [/^\s*when \S+ \{/m, "when with a block"], [/^\s*catch "/m, "catch with prose"], [/^\s*catch \{/m, "catch with a block"],
       [/^\s*output "/m, "flow output without a name"], [/^context "/m, "context with a purpose"]]) has(pattern, what);
   });
 
@@ -250,22 +250,22 @@ describe("CheckTest", () => {
     assert.match(stats('context {\n    invariant by=human "a"\n    invariant by=robot "b"\n    invariant "c"\n}\n'), /\n  invariants: code 0 · human 1 · llm 0 · unstated 1\n/);
   });
 
-  test("three on-fail blocks that only end with one reason give one warning", () => {
-    const step = (name, inner) => `step ${name} by=code file="scripts/collect.sh" {\n    on-fail "It fails." {\n${inner}    }\n}\n`;
+  test("three catch blocks that only end with one reason give one warning", () => {
+    const step = (name, inner) => `step ${name} by=code file="scripts/collect.sh" {\n    catch "It fails." {\n${inner}    }\n}\n`;
     const end = (reason) => `        end "${reason}"\n`;
     const same = (flow) => runCheck(flow, undefined, false).report.warnings.filter(([, message]) => message.includes("end the flow with the same reason"));
     const three = same(step("a", end("Report the error and stop.")) + step("b", end("report the error and stop")) + step("c", end("Report the  error and stop!")));
-    assert.deepEqual(three.map(([line, message]) => [line, message]), [[3, "3 `on-fail` blocks (lines 3, 8, 13) end the flow with the same reason"]]);
+    assert.deepEqual(three.map(([line, message]) => [line, message]), [[3, "3 `catch` blocks (lines 3, 8, 13) end the flow with the same reason"]]);
     assert.ok(three[0][2].includes("naming scripts/collect.sh"), three[0][2]);
     assert.deepEqual(same(step("a", end("Stop.")) + step("b", end("Stop."))), [], "two are not a repeat");
-    assert.deepEqual(same(step("a", end("Stop.")) + step("b", end("Stop.")) + step("c", '        step tell by=llm "Say it."\n' + end("Stop."))), [], "an on-fail with a step of its own does not count");
+    assert.deepEqual(same(step("a", end("Stop.")) + step("b", end("Stop.")) + step("c", '        step tell by=llm "Say it."\n' + end("Stop."))), [], "a catch with a step of its own does not count");
   });
 
   test("a flow input does not stand for the flow output of the same name", () => {
     const ctx = 'context {\n    input log "the old log"\n    output log "the new log"\n}\n';
     const none = runCheck(ctx + 'step s by=llm\n', undefined, false).report;
     assert.ok(none.errors.some(([, message]) => message.startsWith("flow output `log` is not produced")), JSON.stringify(none.errors));
-    const lost = runCheck(ctx + 'step w by=code {\n    output log\n    on-fail "Report it."\n}\n', undefined, false).report;
+    const lost = runCheck(ctx + 'step w by=code {\n    output log\n    catch "Report it."\n}\n', undefined, false).report;
     assert.deepEqual(lost.errors, []);
     assert.ok(lost.warnings.some(([, message]) => message.includes("exists only when step `w` succeeds")), JSON.stringify(lost.warnings));
   });
@@ -315,59 +315,59 @@ describe("CheckTest", () => {
     assert.deepEqual(report.errors, []);
   });
 
-  test("script without on-fail warns", () => {
+  test("script without catch warns", () => {
     write(path.join(skill, "scripts", "render.sh"), "exit 2\n");
-    const body = 'step a by=llm "Run render.sh --new for a path."\nstep b by=code file="scripts/render.sh"\nstep c by=code file="scripts/collect.sh"\nstep d by=code file="scripts/render.sh" {\n    on-fail "Fix and retry."\n}\n';
+    const body = 'step a by=llm "Run render.sh --new for a path."\nstep b by=code file="scripts/render.sh"\nstep c by=code file="scripts/collect.sh"\nstep d by=code file="scripts/render.sh" {\n    catch "Fix and retry."\n}\n';
     const {report} = runCheck(body);
-    assert.deepEqual(report.warnings.filter(([, m]) => m.includes("no `on-fail`")).map(([at]) => at), [2, 3]);
-    // a failure that several steps share is one invariant that names the script: the steps that run it need no on-fail
-    const shared = (script) => runCheck(`context {\n    invariant "When ${script} exits 2, report the path and end."\n}\n` + body).report.warnings.filter(([, m]) => m.includes("no `on-fail`")).map(([at]) => at);
+    assert.deepEqual(report.warnings.filter(([, m]) => m.includes("no `catch`")).map(([at]) => at), [2, 3]);
+    // a failure that several steps share is one invariant that names the script: the steps that run it need no catch
+    const shared = (script) => runCheck(`context {\n    invariant "When ${script} exits 2, report the path and end."\n}\n` + body).report.warnings.filter(([, m]) => m.includes("no `catch`")).map(([at]) => at);
     assert.deepEqual(shared("scripts/render.sh"), []);
     assert.deepEqual(shared("scripts/other.sh"), [5, 6]);
     // a script in a subfolder of scripts/ is named by its path too
     write(path.join(skill, "scripts", "sub", "run.py"), "sys.exit(2)\n");
-    const nested = (script) => runCheck(`context {\n    invariant "When ${script} exits 2, report it and end."\n}\nstep r by=code file="scripts/sub/run.py"\n`).report.warnings.filter(([, m]) => m.includes("no `on-fail`")).map(([at]) => at);
+    const nested = (script) => runCheck(`context {\n    invariant "When ${script} exits 2, report it and end."\n}\nstep r by=code file="scripts/sub/run.py"\n`).report.warnings.filter(([, m]) => m.includes("no `catch`")).map(([at]) => at);
     assert.deepEqual(nested("scripts/sub/run.py"), []);
     assert.deepEqual(nested("scripts/run.py"), [5]);
   });
 
   test("end beside continue warns", () => {
-    const body = 'step a by=llm {\n    on-fail "Markdown fails: stop. HTML fails: continue." {\n        end "no article"\n    }\n}\nstep b by=llm {\n    on-fail "Both fail: stop." {\n        end "no article"\n    }\n}\n';
+    const body = 'step a by=llm {\n    catch "Markdown fails: stop. HTML fails: continue." {\n        end "no article"\n    }\n}\nstep b by=llm {\n    catch "Both fail: stop." {\n        end "no article"\n    }\n}\n';
     const {report} = runCheck(body);
     assert.deepEqual(report.warnings.filter(([, m]) => m.includes("says the flow continues")).map(([at]) => at), [3]);
   });
 
-  test("stopping on-fail without end warns", () => {
+  test("stopping catch without end warns", () => {
     const body = `step a by=llm {
-    on-fail "Exit 2: report the stderr, then end."
+    catch "Exit 2: report the stderr, then end."
 }
 step b by=llm {
-    on-fail {
+    catch {
         step say by=llm "Refused path: report it and stop."
     }
 }
 step c by=llm {
-    on-fail "Exit 2: report the stderr, then end." {
+    catch "Exit 2: report the stderr, then end." {
         end "allocation failed"
     }
 }
 step d by=llm {
-    on-fail "Exit 2: stop. Missing page: retry."
+    catch "Exit 2: stop. Missing page: retry."
 }
 step e by=llm {
-    on-fail {
+    catch {
         step say-again by=llm "One cause: stop. Other cause: continue."
         end "stopped"
     }
 }
 step f by=llm {
-    on-fail "Report the failure, and the run ends."
+    catch "Report the failure, and the run ends."
 }
 step g by=llm {
-    on-fail "Report it, and the flow stops."
+    catch "Report it, and the flow stops."
 }
 step h by=llm {
-    on-fail "Send nothing."
+    catch "Send nothing."
 }
 `;
     const {report} = runCheck(body);
@@ -395,7 +395,7 @@ step h by=llm {
     assert.deepEqual(messages(report.errors).map((m) => m.split("`")[1]), ["y"]);
   });
 
-  test("on-fail data stays inside", () => {
+  test("catch data stays inside", () => {
     const body = `\
             context {
                 output x "x"
@@ -403,7 +403,7 @@ step h by=llm {
             }
             step make by=llm {
                 output x
-                on-fail {
+                catch {
                     step log by=llm {
                         output note
                     }
@@ -539,10 +539,10 @@ step h by=llm {
     assert.deepEqual(report.warnings.map((w) => w[0]), [7]);
   });
 
-  test("phase in when but not in on-fail", () => {
+  test("phase in when but not in catch", () => {
     const {report} = runCheck('decide mode "Which?" by=llm {\n    when a {\n        phase p {\n            step s by=llm\n        }\n    }\n}\n');
     assert.deepEqual(report.errors, []);
-    assertError('step s by=llm {\n    on-fail {\n        phase p\n    }\n}\n', "`phase` is not allowed inside `on-fail`", 4);
+    assertError('step s by=llm {\n    catch {\n        phase p\n    }\n}\n', "`phase` is not allowed inside `catch`", 4);
   });
 
   test("render shows gate implied outcomes", () => {
@@ -608,11 +608,11 @@ step h by=llm {
     assert.deepEqual(report.errors, []);
   });
 
-  test("depth warning and on-fail level", () => {
+  test("depth warning and catch level", () => {
     const nested = 'phase a {\n    phase b {\n        phase c {\n            decide d "Q?" by=llm {\n                when yes {\n                    step e by=llm\n                }\n            }\n        }\n    }\n}\n';
     let {report} = runCheck(nested);
     assert.deepEqual(report.warnings.map((w) => w[0]), [7]);
-    const handled = "phase a {\n    phase b {\n        phase c {\n            step d by=llm {\n                on-fail {\n                    step e by=llm\n                }\n            }\n        }\n    }\n}\n";
+    const handled = "phase a {\n    phase b {\n        phase c {\n            step d by=llm {\n                catch {\n                    step e by=llm\n                }\n            }\n        }\n    }\n}\n";
     ({report} = runCheck(handled));
     assert.deepEqual(report.warnings, []);
   });

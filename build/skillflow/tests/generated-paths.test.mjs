@@ -11,7 +11,7 @@ import {reference} from "./reference-model.mjs";
 import {skillUrl} from "./skill-path.mjs";
 const {argsProps, check, follow, kids, lineOf, parseFlow, Report} = await import(skillUrl("scripts/validate.mjs"));
 
-// a profile sets how often each shape appears: "mixed" covers all structure; "recovery" makes continuing on-fail
+// a profile sets how often each shape appears: "mixed" covers all structure; "recovery" makes continuing catch
 // handlers common, so the recovery warnings get real coverage. min: cases each run must reach.
 const PROFILES = {
   mixed: {seed: 20261108, cases: 1500, names: ["a", "b", "c"], output: 0.65, input: 0.5, fail: 0.4, handlerOutput: 0.4, handlerEnd: 0.2, more: 0.5, min: {missing: 500, recovery: 40, ended: 50}},
@@ -29,7 +29,7 @@ function action(depth = 0, handler = false) {
   if (kind === "phase") return `phase ${name} {\n${block(depth + 1)}\n}\n`;
   if (kind === "step") {
     const fail = depth < 3 && random() < P.fail
-      ? `on-fail "Recover." {\n${random() < P.handlerOutput ? `output ${data()}\n` : ""}${random() < 0.65 ? action(depth + 1, true) : ""}${random() < P.handlerEnd ? 'end "stopped"\n' : ""}}\n` : "";
+      ? `catch "Recover." {\n${random() < P.handlerOutput ? `output ${data()}\n` : ""}${random() < 0.65 ? action(depth + 1, true) : ""}${random() < P.handlerEnd ? 'end "stopped"\n' : ""}}\n` : "";
     return `step ${name} by=code {\n${ports()}${fail}}\n`;
   }
   const outcomes = kind === "gate" ? pick([["rejected"], ["approved", "rejected"], ["approved"], ["revise", "rejected"]]) : pick([["yes"], ["yes", "no"]]);

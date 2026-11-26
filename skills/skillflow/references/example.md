@@ -34,7 +34,7 @@ phase gather "Find what changed since the last tag." {
 		tools gh /* the GitHub CLI */
 		output changes "the commits and pull requests since the last tag"
 
-		on-fail {
+		catch {
 			end "report that the tag does not exist"
 		}
 	}
@@ -77,7 +77,7 @@ phase write ref="S2" {
 	step publish by=code {
 		output changelog
 
-		on-fail {
+		catch {
 			step report-error by=llm "Show the error and leave CHANGELOG.md unchanged."
 			end "CHANGELOG.md stays unchanged"
 		}
@@ -86,7 +86,7 @@ phase write ref="S2" {
 	/- step tweet by=llm "Post the notes."
 
 	step announce by=human #"The user posts the "What's new" section to the team channel."# {
-		on-fail "The notes stay in CHANGELOG.md only."
+		catch "The notes stay in CHANGELOG.md only."
 	}
 }
 ```
@@ -111,7 +111,7 @@ phase write ref="S2" {
   `(mcp)jira` a tool of an MCP server, and `gh` a CLI with no kind.
 - `phase write ref="S2"` links the phase to the part of the skill that has the
   label `S2`. `skill=style-guide` on `polish` loads another skill.
-- The three `on-fail`: in `collect-changes` it ends the flow; in `publish` it
+- The three `catch`: in `collect-changes` it ends the flow; in `publish` it
   reports the error in a step of its own and then ends the flow; in `announce`
   it is one line of prose, and the flow continues.
 - The revision loop lives in the prose of `draft`, because loops are prose only.
