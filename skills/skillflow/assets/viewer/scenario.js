@@ -4,7 +4,7 @@
   function firstLine(text) { return sfText.bare(String(text || '').split('\n').filter(function (l) { return l.trim(); })[0] || ''); }
   // the outcomes of a branch point in the order the graph draws them: {o, ends, w (the written when), revise}
   function outcomesOf(n) {
-    if (n.kind === 'step') return [{ o: 'ok', ends: false }, { o: 'fails', ends: !!n.onfail.ends }];
+    if (n.kind === 'step') return [{ o: 'ok', ends: false }, { o: 'fails', ends: !!n.catch.ends }];
     var imp = (n.implied || []).map(function (x) { return { o: x.outcome, ends: false, revise: x.outcome === 'revise' }; });
     var wr = n.whens.map(function (w) { return { o: w.outcome, ends: !!w.ends, w: w }; });
     return n.kind === 'gate' ? imp.concat(wr) : wr.concat(imp);
@@ -43,13 +43,13 @@
         } else if (n.kind === 'end') return end(n, n.text ? firstLine(n.text) : 'the flow stops here', failing ? 'stop' : 'end');
         else if (n.kind === 'step') {
           var row = card(n);
-          if (!n.onfail) continue;
-          var o = branch(row, n.onfail.id, n);
-          r.passed[n.onfail.id + '=' + o.o] = true;
+          if (!n.catch) continue;
+          var o = branch(row, n.catch.id, n);
+          r.passed[n.catch.id + '=' + o.o] = true;
           if (o.o === 'ok') continue;
-          card(n.onfail, 'fail');
-          if (walk(n.onfail.children, true)) return true;
-          if (n.onfail.ends) return end(n.onfail, firstLine(n.onfail.prose) || 'the flow stops after the failure', 'stop');
+          card(n.catch, 'fail');
+          if (walk(n.catch.children, true)) return true;
+          if (n.catch.ends) return end(n.catch, firstLine(n.catch.prose) || 'the flow stops after the failure', 'stop');
         } else if (n.kind === 'decide' || n.kind === 'gate') {
           var head = card(n), pick = branch(head, n.id, n), key = n.id + '=' + pick.o;
           if (pick.revise) {
@@ -76,14 +76,14 @@
     return r;
   }
   // ---------- scenario address: #scenario=name=outcome,… keeps the picks of one run, so a reader can send it ----------
-  // fork key -> its card: a decide or gate is keyed by its own id, a step with on-fail by the on-fail's id
+  // fork key -> its card: a decide or gate is keyed by its own id, a step with catch by the catch's id
   function scnCards() {
     var out = {};
     Object.keys(byId).forEach(function (id) {
       var n = byId[id];
       if (id.charAt(0) !== 'n' || !n.name) return;  // x-ids belong to the Help example, whose card names would shadow the flow's
       if (n.kind === 'decide' || n.kind === 'gate') out[n.id] = n;
-      else if (n.kind === 'step' && n.onfail) out[n.onfail.id] = n;
+      else if (n.kind === 'step' && n.catch) out[n.catch.id] = n;
     });
     return out;
   }

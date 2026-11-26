@@ -16,11 +16,11 @@ const named = (n) => String(argv(n)[0] ?? "");
 const items = (n, names) => kidsOf(n).filter((k) => names.includes(k.getName())).flatMap((k) => argv(k).map(String));
 const key = (set) => [...set].sort().join("\u0000");
 
-/** strict: a failed step whose on-fail continues has only what the handler path has (declared recovery, rule 5). */
+/** strict: a failed step whose catch continues has only what the handler path has (declared recovery, rule 5). */
 export function reference(text, strict = false) {
   const doc = parse(text);
   const missing = new Set(), unreachable = new Set(), produced = new Set(), required = new Set(), reached = new Set();
-  // terminates: "phase", "decision/outcome", or "step/on-fail" -> true when no path falls through that block
+  // terminates: "phase", "decision/outcome", or "step/catch" -> true when no path falls through that block
   const terminates = {};
   const sub = (label, nodes, states) => { const out = block(nodes, states); terminates[label] = (terminates[label] ?? true) && !out.length; return out; };
   const ctx = doc.nodes.find((n) => n.getName() === "context");
@@ -45,10 +45,10 @@ export function reference(text, strict = false) {
         const base = new Set([...s, ...made, ...asked]);
         if (kind === "step") {
           next.push(base);
-          const fail = kidsOf(node).find((k) => k.getName() === "on-fail");
+          const fail = kidsOf(node).find((k) => k.getName() === "catch");
           // the handler runs without the failed step's data, with what it declares it restores; a handler that continues
           // counts as recovered: the step's data stays (lenient), or the path carries on with what the handler has (strict)
-          const handled = fail ? sub(`${named(node)}/on-fail`, kidsOf(fail), [new Set([...s, ...items(fail, MAKE)])]) : [];
+          const handled = fail ? sub(`${named(node)}/catch`, kidsOf(fail), [new Set([...s, ...items(fail, MAKE)])]) : [];
           if (handled.length) next.push(...(strict ? handled : [new Set(base)]));
           continue;
         }
@@ -70,7 +70,7 @@ export function reference(text, strict = false) {
   }
 
   // guarantee 9 is global: count every input and output, reachable or not
-  const all = (n) => { if (ACTION.has(n.getName()) || n.getName() === "when" || n.getName() === "on-fail") { items(n, NEED).forEach((r) => required.add(r)); items(n, MAKE).forEach((m) => produced.add(m)); } kidsOf(n).forEach(all); };
+  const all = (n) => { if (ACTION.has(n.getName()) || n.getName() === "when" || n.getName() === "catch") { items(n, NEED).forEach((r) => required.add(r)); items(n, MAKE).forEach((m) => produced.add(m)); } kidsOf(n).forEach(all); };
   doc.nodes.forEach(all);
   const finals = block(doc.nodes, [new Set(inputs)]);
   const end = finals.length ? [...finals.reduce((a, b) => a.intersection(b))].sort() : null;

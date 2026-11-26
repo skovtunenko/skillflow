@@ -16,7 +16,7 @@ phase scan ref="S1" {
 	step scan-receipts by=code file="scripts/scan.sh" {
 		output receipts "the file, date, amount, and currency of each receipt"
 
-		on-fail {
+		catch {
 			end "tell the user that the folder has no receipts"
 		}
 	}

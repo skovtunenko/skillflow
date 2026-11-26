@@ -158,10 +158,10 @@ test("htmlLines gives one escaped line of spans for each text line", () => {
 test("graph changes: new and changed cards by a key that survives a redraw", () => {
   const model = (flow) => ({flow});
   const before = model([{id: "n1", kind: "step", name: "read", prose: "Read.", line: 3, children: []},
-    {id: "n2", kind: "decide", name: "ok", line: 5, whens: [{outcome: "no", children: [{id: "n3", kind: "end", text: "stop", line: 7}]}], onfail: {id: "n4", kind: "onfail", children: []}}]);
+    {id: "n2", kind: "decide", name: "ok", line: 5, whens: [{outcome: "no", children: [{id: "n3", kind: "end", text: "stop", line: 7}]}], catch: {id: "n4", kind: "catch", children: []}}]);
   const after = model([{id: "m1", kind: "step", name: "added", prose: "New.", line: 2, children: []},
     {id: "m2", kind: "step", name: "read", prose: "Read it all.", line: 6, children: []},
-    {id: "m3", kind: "decide", name: "ok", line: 9, whens: [{outcome: "no", children: [{id: "m4", kind: "end", text: "stop", line: 11}]}], onfail: {id: "m5", kind: "onfail", children: []}}]);
+    {id: "m3", kind: "decide", name: "ok", line: 9, whens: [{outcome: "no", children: [{id: "m4", kind: "end", text: "stop", line: 11}]}], catch: {id: "m5", kind: "catch", children: []}}]);
   assert.deepEqual(diff.changes(before, after), {added: ["m1"], changed: ["m2"]}, "a card that only moved to another line is not changed");
   assert.deepEqual(diff.changes(before, before), {added: [], changed: []});
 });
@@ -183,7 +183,7 @@ context {
 step collect by=code file="scripts/collect.mjs" "Collect the changed files." {
 	tools git rg
 	output files "the changed files"
-	on-fail "Report the error; the run ends."
+	catch "Report the error; the run ends."
 }
 
 decide risky "Does the change touch a public API?" by=llm {
@@ -233,8 +233,8 @@ test("the place of the cursor selects what fits: a node of the parent, a propert
 });
 
 test("rank puts a start match first and keeps letters in order; expand gives a template its indent and its fields", () => {
-  const items = ["output", "on-fail", "tools", "input"].map((label) => ({label}));
-  assert.deepEqual(rank(items, "o").map((item) => item.label), ["output", "on-fail", "tools"]);
+  const items = ["output", "skillflow", "tools", "input"].map((label) => ({label}));
+  assert.deepEqual(rank(items, "o").map((item) => item.label), ["output", "skillflow", "tools"]);
   assert.deepEqual(rank(items, "ot").map((item) => item.label), ["output"], "o then t, in this order");
   assert.deepEqual(rank(items, "").length, 4);
   assert.deepEqual(expand("a ${b}\nc", "\t"), {text: "a b\n\tc", stops: [[2, 3]]});

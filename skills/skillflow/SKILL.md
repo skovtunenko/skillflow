@@ -2,7 +2,7 @@
 name: skillflow
 description: Describes a skill's workflow as a KDL flow file, checks and syncs the skill against it, and renders it as an HTML page. Use when the user says "skillflow", "skillflow help", "skillflow reverse", "skillflow author", "skillflow check", "skillflow sync", or "skillflow explain", or after a change to a skill whose folder has a flow file (flow.kdl or a .kdl file named after the skill).
 metadata:
-  version: "2026.11.25.5"
+  version: "2026.11.26.2"
 ---
 
 # SkillFlow
@@ -190,7 +190,7 @@ Report differences; change no file.
    - ❓ not established: a relevant file was not read, or passages contradict.
      Say what you read and what you did not find.
 
-   Count these elements: each `context` line; each node, `on-fail` included; each
+   Count these elements: each `context` line; each node, `catch` included; each
    `when` outcome, a gate's implied `approved` and `revise`, and the implied
    outcome of a one-`when` decide; each executor (a gate is human), an invariant's `by` included: `by=code` is ✅ only with a script line that fails or blocks on the broken rule, and ❌ without one, whatever the instructions say about the script; each `input`, `output`, or
    `tools` line; each `file`, `skill`, and `ref`; and the order of each block with two
@@ -258,7 +258,7 @@ to the change:
    step draft (llm)  + output draft
 -  gate approved
 +  step publish (code)
-+    on-fail → end
++    catch → end
 ```
 
 ## Set up

@@ -106,7 +106,7 @@
     miniSvg.setAttribute('width', mw); miniSvg.setAttribute('height', mh); miniSvg.setAttribute('viewBox', '0 0 ' + state.W + ' ' + state.H);
     all.groups.forEach(function (g) { miniSvg.appendChild(svgEl('rect', { x: g.x, y: g.y, width: g.w, height: g.h, rx: 16, 'class': 'mm-g' })); });
     all.nodes.forEach(function (p) {
-      var n = byId[p.id], r = svgEl('rect', { x: p.x, y: p.y, width: p.w, height: p.h, rx: 8, 'class': 'mm-n ' + (n ? (n.kind === 'onfail' ? 'fail' : n.by || '') : '') });
+      var n = byId[p.id], r = svgEl('rect', { x: p.x, y: p.y, width: p.w, height: p.h, rx: 8, 'class': 'mm-n ' + (n ? (n.kind === 'catch' ? 'fail' : n.by || '') : '') });
       r.dataset.id = p.id; miniSvg.appendChild(r);
     });
     miniView = svgEl('rect', { x: 0, y: 0, width: 1, height: 1, 'class': 'mm-v' }); miniSvg.appendChild(miniView);

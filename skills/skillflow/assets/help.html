@@ -35,23 +35,23 @@ output notes "the release notes"</pre></div>
 <div class="nrow"><div><h3><i data-g="phase"></i> <code>phase</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code></p><p>A group of steps.</p></div><pre class="kdl">phase write "Draft and approve." {
     step draft by=llm
 }</pre></div>
-<div class="nrow"><div><h3><i data-g="step"></i> <code>step</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>One action. <code>by</code> is required: <code>llm</code> the model, <code>code</code> a script or fixed command, <code>human</code> the user. <code>file=</code> names the script of a code step; <code>skill=</code> names a skill the step loads.</p></div><pre class="kdl">step collect by=code file="scripts/collect.sh"
+<div class="nrow"><div><h3><i data-g="step"></i> <code>step</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>catch</code></p><p>One action. <code>by</code> is required: <code>llm</code> the model, <code>code</code> a script or fixed command, <code>human</code> the user. <code>file=</code> names the script of a code step; <code>skill=</code> names a skill the step loads.</p></div><pre class="kdl">step collect by=code file="scripts/collect.sh"
 step draft by=llm "Group the changes by type."</pre></div>
-<div class="nrow"><div><h3><i data-g="decide"></i> <code>decide</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>A fork of the path: a name, a question and <code>by</code>. At least one <code>when</code> holds a node or an <code>end</code>. With one <code>when</code>, the other outcome is implied and continues below.</p></div><pre class="kdl">decide mode "Which mode?" by=llm {
+<div class="nrow"><div><h3><i data-g="decide"></i> <code>decide</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>catch</code></p><p>A fork of the path: a name, a question and <code>by</code>. At least one <code>when</code> holds a node or an <code>end</code>. With one <code>when</code>, the other outcome is implied and continues below.</p></div><pre class="kdl">decide mode "Which mode?" by=llm {
     when draft "the draft continues below"
     when publish { end "nothing to draft" }
 }</pre></div>
-<div class="nrow"><div><h3><i data-g="gate" class="c-human"></i> <code>gate</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>An approval by the user; no <code>by</code>. Two outcomes are implied: <b>approved</b> continues, <b>revise</b> redoes the work before the gate and asks again. A <code>when</code> adds an outcome or overrides an implied one.</p></div><pre class="kdl">gate approved "Did the user approve the draft?" {
+<div class="nrow"><div><h3><i data-g="gate" class="c-human"></i> <code>gate</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>catch</code></p><p>An approval by the user; no <code>by</code>. Two outcomes are implied: <b>approved</b> continues, <b>revise</b> redoes the work before the gate and asks again. A <code>when</code> adds an outcome or overrides an implied one.</p></div><pre class="kdl">gate approved "Did the user approve the draft?" {
     when rejected { end "stopped without approval" }
 }</pre></div>
 <div class="nrow"><div><h3><code>when</code></h3><p class="where">In <code>decide</code>, <code>gate</code></p><p>One outcome, with prose or a block. After it the flow continues below the <code>decide</code> or <code>gate</code>, unless it reaches <code>end</code>.</p></div><pre class="kdl">when yes { step publish by=code }
 when no "The draft stays local."</pre></div>
-<div class="nrow"><div><h3><i data-g="fail" class="c-fail"></i> <code>on-fail</code></h3><p class="where">In <code>step</code>, at most one</p><p>What happens when the step fails. Unless it reaches <code>end</code>, the flow goes on after the step. An <code>output</code> inside names data that the recovery restores.</p></div><pre class="kdl">step publish by=code {
-    on-fail "Show the error." { end "nothing is published" }
+<div class="nrow"><div><h3><i data-g="fail" class="c-fail"></i> <code>catch</code></h3><p class="where">In <code>step</code>, at most one</p><p>What happens when the step fails. Unless it reaches <code>end</code>, the flow goes on after the step. An <code>output</code> inside names data that the recovery restores.</p></div><pre class="kdl">step publish by=code {
+    catch "Show the error." { end "nothing is published" }
 }</pre></div>
-<div class="nrow"><div><h3><i data-g="end"></i> <code>end</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>on-fail</code></p><p>The flow stops here. A node after it in the same block is an error.</p></div><pre class="kdl">end "the tag does not exist"</pre></div>
+<div class="nrow"><div><h3><i data-g="end"></i> <code>end</code></h3><p class="where">Top level, <code>phase</code>, <code>when</code>, <code>catch</code></p><p>The flow stops here. A node after it in the same block is an error.</p></div><pre class="kdl">end "the tag does not exist"</pre></div>
 <div class="nrow"><div><h3><i data-g="tool"></i> <code>tools</code></h3><p class="where">In <code>step</code>, <code>decide</code>, <code>gate</code></p><p>Tools the node uses: MCP, CLI, web and agent tools, such as a question tool. A name may carry its kind: <code>(agent)</code> a subagent, <code>(mcp)</code> a tool of an MCP server.</p></div><pre class="kdl">tools (agent)reviewer (mcp)jira gh</pre></div>
-<div class="nrow"><div><h3><i data-g="input"></i> <code>input</code> <i data-g="output"></i> <code>output</code> in a node</h3><p class="where">In <code>step</code>, <code>decide</code>, <code>gate</code>; <code>output</code> also in <code>when</code> and <code>on-fail</code></p><p><code>output</code> is data the node produces. <code>input</code> is material the skill asks the user for at that node.</p></div><pre class="kdl">output changes "the commits since the last tag"
+<div class="nrow"><div><h3><i data-g="input"></i> <code>input</code> <i data-g="output"></i> <code>output</code> in a node</h3><p class="where">In <code>step</code>, <code>decide</code>, <code>gate</code>; <code>output</code> also in <code>when</code> and <code>catch</code></p><p><code>output</code> is data the node produces. <code>input</code> is material the skill asks the user for at that node.</p></div><pre class="kdl">output changes "the commits since the last tag"
 input notes "the user's own notes on the release"</pre></div>
 <div class="nrow"><div><h3><i data-g="ask" class="c-ask"></i> <code>// ?</code></h3><p class="where">On its own line above a node</p><p>An unclear place in the skill. The page shows it as ❓ on that card.</p></div><pre class="kdl">// ? how many revision rounds? (SKILL.md:24)</pre></div>
 </div>
@@ -72,7 +72,7 @@ input notes "the user's own notes on the release"</pre></div>
 <p hidden><code>changes</code>, <code>size</code>, <code>highlights</code> and <code>draft</code> each have one line with a description. <code>highlights</code> is an <code>input</code>: the step asks the user for it.</p>
 <p hidden><code>decide size</code> forks the path. <code>when major</code> holds a step; <code>when regular</code> says in prose why nothing happens. Then both go on to <code>draft</code>.</p>
 <p hidden><code>gh</code> is a CLI and has no kind. <code>(agent)editor</code> is a subagent, and <code>(mcp)jira</code> is a tool of an MCP server.</p>
-<p hidden>The <code>on-fail</code> of <code>collect-changes</code> ends the flow at once. The one of <code>publish</code> reports the error in a step of its own, then ends the flow. The one of <code>announce</code> is one line of prose, and the flow goes on.</p>
+<p hidden>The <code>catch</code> of <code>collect-changes</code> ends the flow at once. The one of <code>publish</code> reports the error in a step of its own, then ends the flow. The one of <code>announce</code> is one line of prose, and the flow goes on.</p>
 <p hidden>The revision loop is in the prose of <code>draft</code>. A flow has no loop node.</p>
 <p hidden><code>gate approved</code> writes no <code>when approved</code>: approved goes on to <code>publish</code>, and revise sends the draft back. <code>when rejected</code> ends the flow.</p>
 </div>
@@ -124,13 +124,13 @@ step draft by=llm "Write the notes."</pre></figure><figure class="side prefer"><
 	invariant by=code "build.py refuses an unsigned build"
 }
 step draft by=llm "Write one section for each type."</pre></figure></div></div>
-<div class="nrow"><div><h3>Write a shared failure once</h3><p>A failure that several steps handle the same way is one <code>invariant</code> that names the script. An <code>on-fail</code> holds only the failures of its own step.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step collect by=code {
-	on-fail {
+<div class="nrow"><div><h3>Write a shared failure once</h3><p>A failure that several steps handle the same way is one <code>invariant</code> that names the script. A <code>catch</code> holds only the failures of its own step.</p></div><div class="pair"><figure class="side avoid"><figcaption><i data-g="fail"></i>Avoid</figcaption><pre class="kdl" data-flow>step collect by=code {
+	catch {
 		end "collect.sh failed"
 	}
 }
 step count by=code {
-	on-fail {
+	catch {
 		end "collect.sh failed"
 	}
 }</pre></figure><figure class="side prefer"><figcaption><i data-g="check"></i>Prefer</figcaption><pre class="kdl" data-flow>context {

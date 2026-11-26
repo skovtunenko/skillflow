@@ -77,7 +77,7 @@ function* cards(nodes) {
   for (const n of nodes) {
     yield n;
     yield* cards(n.children ?? []);
-    if (n.onfail) yield* cards(n.onfail.children);
+    if (n.catch) yield* cards(n.catch.children);
     for (const w of n.whens ?? []) yield* cards(w.children);
   }
 }
@@ -87,7 +87,7 @@ function modelTerminates(model) {
   const out = {};
   for (const n of cards(model.flow)) {
     if (n.kind === "phase") out[n.name] = n.ends;
-    if (n.onfail) out[`${n.name}/on-fail`] = n.onfail.ends;
+    if (n.catch) out[`${n.name}/catch`] = n.catch.ends;
     for (const w of n.whens ?? []) out[`${n.name}/${w.outcome}`] = w.ends;
   }
   return out;
@@ -119,7 +119,7 @@ describe("data forms", () => {
 });
 
 test("a recovery warning names the step on the path that reaches the end, not one on an ended branch", () => {
-  const branch = (outcome, step, tail) => `  when ${outcome} {\n    step ${step} by=code {\n      output report\n      on-fail "Continue without a report."\n    }\n${tail}  }\n`;
+  const branch = (outcome, step, tail) => `  when ${outcome} {\n    step ${step} by=code {\n      output report\n      catch "Continue without a report."\n    }\n${tail}  }\n`;
   const report = validate(flowText(`decide route "Which?" by=human {\n${branch("archived", "obsolete", '    end "archived"\n')}${branch("active", "current", "")}}\n`.replace(/^/, 'context {\n  output report "the report"\n}\n')));
   assert.deepEqual(report.errors, []);
   assert.deepEqual(report.warnings.filter(([, m]) => m.includes("exists only when")).map(([, m]) => m.match(/step `(.+?)`/)[1]), ["current"]);

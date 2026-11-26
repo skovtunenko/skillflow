@@ -77,7 +77,7 @@ test("kdl: tokenize keeps every character and classes the tutorial flow, edge sy
 });
 
 test("comments: hash, stamp, and readEnvelope on malformed and hostile envelopes", () => {
-  assert.deepEqual([sfComments.hash(M.sourceText), sfComments.hash(HOSTILE), sfComments.hash("")], ["botn70", "14qsx8h", "ztntfp"]);
+  assert.deepEqual([sfComments.hash(M.sourceText), sfComments.hash(HOSTILE), sfComments.hash("")], ["aa0002", "14qsx8h", "ztntfp"]);
   assert.deepEqual([sfComments.stamp("2026-11-08T21:31:00+02:00"), sfComments.stamp("garbage"), sfComments.stamp(5), sfComments.stamp("")], ["2026-11-08T19:31:00.000Z", "", "", ""]);
   assert.deepEqual([sfComments.readEnvelope(null), sfComments.readEnvelope("x"), sfComments.readEnvelope(42)], [null, null, null]);
   // version 0.3: a bare list

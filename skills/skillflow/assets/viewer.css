@@ -222,10 +222,10 @@ transition:opacity .15s,box-shadow .2s,border-color .2s;overflow:hidden}
 .node.k-gate .nb{-webkit-line-clamp:2;color:var(--ink);font-weight:550}
 .gt{margin-left:auto;font-size:var(--fs-10);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--human)}
 .node.k-end{border-radius:999px;border:1.5px solid var(--end);box-shadow:var(--shadow-1);text-align:center}
-.node.k-end::before,.node.k-onfail::before,.node.k-start::before,.node.k-phase::before{display:none}
+.node.k-end::before,.node.k-catch::before,.node.k-start::before,.node.k-phase::before{display:none}
 .node.k-end .nh{justify-content:center;padding:6px 14px 0}.node.k-end .nb{padding:2px 14px 0;margin-bottom:7px}
-.node.k-onfail{--x:var(--fail);border:1px solid var(--fail);background:var(--fail-soft)}
-.node.k-onfail .nh{color:var(--fail);font-size:var(--fs-12);font-weight:600}
+.node.k-catch{--x:var(--fail);border:1px solid var(--fail);background:var(--fail-soft)}
+.node.k-catch .nh{color:var(--fail);font-size:var(--fs-12);font-weight:600}
 .nh .arrow{color:var(--muted);font-weight:400}.how{font-size:var(--fs-11);font-weight:650;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:0 5px}
 .how.recover{color:var(--code);background:var(--code-soft)}.how.stop{color:var(--fail);background:var(--surface)}
 .node.k-start{border-radius:999px;background:var(--surface-2);box-shadow:none;cursor:default;color:var(--muted);font-size:var(--fs-11);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -606,7 +606,7 @@ pre.cmd{font:var(--fs-13)/calc(20/13) var(--mono);-webkit-font-smoothing:auto;ba
 .khint{display:none}
 }
 @media (prefers-reduced-motion:reduce){.sec>summary .chev,.rvplace .go,.scnentry .go{transition:none}.node{transition:none}.node.flash{animation:none}.toast,.ichip,.intents .ichip::before,.cfield,.ctools{transition:none}.sstat[data-state=busy] .sdot{animation:none}}
-/* on-fail footnote: a short on-fail of a step (prose only, or one end), shown in the step's card */
+/* catch footnote: a short catch of a step (prose only, or one end), shown in the step's card */
 .nfail{display:flex;align-items:baseline;gap:6px;margin:0 10px 8px 12px;padding-top:6px;border-top:1px dashed var(--line-2);font-size:var(--fs-11_5);line-height:1.3914;color:var(--ink-2);min-width:0}
 .nf+.nfail{margin-top:0}
 .nfail .how{flex:none;text-transform:none;letter-spacing:0;font-size:var(--fs-11)}
@@ -778,7 +778,7 @@ svg.edges.scn .ah.on{opacity:1;fill:var(--accent)}
 .scards li{counter-increment:card}
 .scards .item .t{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
 .scards .item .t .ex{font:500 var(--fs-10_5)/1.5 var(--sans)}
-.scards .item.k-onfail .g{color:var(--fail)}.scards .item.k-end .g{color:var(--end)}.scards .item.k-gate .g{color:var(--human)}
+.scards .item.k-catch .g{color:var(--fail)}.scards .item.k-end .g{color:var(--end)}.scards .item.k-gate .g{color:var(--human)}
 .snav{display:flex;justify-content:space-between;gap:8px}
 .snav .btn{min-width:0;max-width:48%;gap:6px}
 .snav .snm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 var(--fs-12) var(--mono)}

@@ -40,10 +40,11 @@ const run = (...argv) => spawnSync(process.execPath, [cli, ...argv], {encoding: 
 const examples = readdirSync(join(SITE, "examples")).filter((name) => name.endsWith(".kdl")).sort();
 const lint = {};
 for (const name of examples) {
-  const result = run("lint", join(SITE, "examples", name)), lines = result.stdout.split("\n");
+  // run from examples/, so lint prints the file name, not a path
+  const result = spawnSync(process.execPath, [cli, "lint", name], {encoding: "utf8", cwd: join(SITE, "examples")}), lines = result.stdout.split("\n");
   if (result.status !== 0 || !/^unchanged /.test(lines[0]) || !/^OK [^·]*$/.test(lines[1] ?? "")) fail(`example ${name} does not pass lint:\n${result.stdout}${result.stderr}`);
-  // the Modes section shows the real output of lint: the format line, the OK line, its counts, tools, and invariants (not the versions, which change with each release), with the file name only
-  lint[name] = lines.slice(0, 5).join("\n").replaceAll(join(SITE, "examples", name), name);
+  // the Modes section shows the real output of lint: the format line, the OK line, its counts, tools, and invariants (not the versions, which change with each release)
+  lint[name] = lines.slice(0, 5).join("\n");
 }
 
 // 2. the single sources
@@ -73,7 +74,7 @@ function example(name) {
   }
   return models.get(name);
 }
-const children = (node) => [...(node.children ?? []), ...(node.whens ?? []).flatMap((branch) => branch.children), ...(node.onfail?.children ?? [])];
+const children = (node) => [...(node.children ?? []), ...(node.whens ?? []).flatMap((branch) => branch.children), ...(node.catch?.children ?? [])];
 const walk = (nodes) => nodes.flatMap((node) => [node, ...walk(children(node))]);
 
 /** The highlighted lines of an example. With `pair`, a line that starts a node or an invariant carries its name and executor;
@@ -104,10 +105,10 @@ function graphHtml(name, pair, marks) {
   const end = (node, cls = "ep") => `<span class="${cls}${m(node)}">${e(node.text || "end")}</span>`;
   const fork = (branches) => `<div class="fork${branches.every((b) => b.ends) ? " stop" : ""}" style="--n:${branches.length}">` +
     branches.map((b) => `<div class="br">${ED}<span class="lbl">${e(b.outcome)}</span>${block(b.children ?? [])}${b.ends ? "" : ED}</div>`).join("") + "</div>";
-  const failRow = (onfail) => {
-    const ends = onfail.children.filter((kid) => kid.kind === "end"), rest = onfail.children.filter((kid) => kid.kind !== "end");
+  const failRow = (caught) => {
+    const ends = caught.children.filter((kid) => kid.kind === "end"), rest = caught.children.filter((kid) => kid.kind !== "end");
     return (rest.length ? `<div class="z">${block(rest)}</div>` : "") +
-      `<span class="fl">fail ${ends.length ? ends.map((kid) => end(kid, "ep fail")).join("") : `<span class="ep">${e(onfail.prose || "continues")}</span>`}</span>`;
+      `<span class="fl">fail ${ends.length ? ends.map((kid) => end(kid, "ep fail")).join("") : `<span class="ep">${e(caught.prose || "continues")}</span>`}</span>`;
   };
   const one = (node) => {
     // the spaces keep the words apart in the accessible name; a flex container does not draw them
@@ -116,10 +117,10 @@ function graphHtml(name, pair, marks) {
     switch (node.kind) {
       case "phase": return `<div class="pb">${pair ? card(node, "a", `<span>phase</span> ${e(node.name)}`) : `<div class="a${m(node)}"><span>phase</span> ${e(node.name)}</div>`}<div class="z">${block(node.children)}</div></div>`;
       case "step": {
-        // an on-fail that only ends the flow is a footnote of its card, as on the flow page, so the line of the flow stays whole
-        const stop = node.onfail && node.onfail.children.length && node.onfail.children.every((kid) => kid.kind === "end");
-        const foot = stop ? ` <span class="ft">fail ${node.onfail.children.map((kid) => end(kid, "ep fail")).join("")}</span>` : "";
-        return card(node, `n ${node.by}`, head + foot) + (node.onfail && !stop ? failRow(node.onfail) : "");
+        // a catch that only ends the flow is a footnote of its card, as on the flow page, so the line of the flow stays whole
+        const stop = node.catch && node.catch.children.length && node.catch.children.every((kid) => kid.kind === "end");
+        const foot = stop ? ` <span class="ft">fail ${node.catch.children.map((kid) => end(kid, "ep fail")).join("")}</span>` : "";
+        return card(node, `n ${node.by}`, head + foot) + (node.catch && !stop ? failRow(node.catch) : "");
       }
       case "decide": return card(node, `n ${node.by} dec`, head + q) + ED + fork([...node.whens, ...(node.implied ?? [])]);
       case "gate": {

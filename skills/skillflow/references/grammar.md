@@ -24,14 +24,14 @@ a flow.
 | `output` | `context` | `output [<name>] "description"` | What the skill produces; a named output must exist at the end of the flow |
 | `invariant` | `context` | `invariant [by=<who>] "rule"` | A rule that must hold during the flow; `by` says who keeps it (rule 10) |
 | `phase` | top level, `phase`, `when` | `phase <name> ["prose"] { … }` | A group of steps |
-| `step` | top level, `phase`, `when`, `on-fail` | `step <name> by=<who> ["prose"] [{ … }]` | One action |
-| `decide` | top level, `phase`, `when`, `on-fail` | `decide <name> "question?" by=<who> ["prose"] { … }` | A fork of the path: at least one `when` holds a node or an `end` (rule 3) |
-| `gate` | top level, `phase`, `when`, `on-fail` | `gate <name> "question?" ["prose"] [{ … }]` | A human approval checkpoint; `approved` and `revise` are implied |
+| `step` | top level, `phase`, `when`, `catch` | `step <name> by=<who> ["prose"] [{ … }]` | One action |
+| `decide` | top level, `phase`, `when`, `catch` | `decide <name> "question?" by=<who> ["prose"] { … }` | A fork of the path: at least one `when` holds a node or an `end` (rule 3) |
+| `gate` | top level, `phase`, `when`, `catch` | `gate <name> "question?" ["prose"] [{ … }]` | A human approval checkpoint; `approved` and `revise` are implied |
 | `when` | `decide`, `gate` | `when <outcome> "prose"` or `when <outcome> ["prose"] { … }` | One outcome of a branch; a bare `when <outcome>` is an error |
-| `on-fail` | `step` | `on-fail ["prose"] [{ … }]` | What happens when the step fails |
-| `end` | top level, `phase`, `when`, `on-fail` | `end ["reason"]` | Early exit where the flow stops; omit a closing top-level `end` (rule 3) |
+| `catch` | `step` | `catch ["prose"] [{ … }]` | What happens when the step fails |
+| `end` | top level, `phase`, `when`, `catch` | `end ["reason"]` | Early exit where the flow stops; omit a closing top-level `end` (rule 3) |
 | `tools` | `step`, `decide`, `gate` | `tools [(kind)]<tool> …` | Tools the node uses: MCP, CLI, web, and agent tools the skill names, such as a question tool; a kind is `(agent)` or `(mcp)` (rule 15) |
-| `output` | `step`, `decide`, `gate`, `when`, `on-fail` | `output <data> "description"` | Data the node makes, written once where it first appears |
+| `output` | `step`, `decide`, `gate`, `when`, `catch` | `output <data> "description"` | Data the node makes, written once where it first appears |
 
 ### Properties
 
@@ -62,7 +62,7 @@ A property is `key=value` after a node's arguments. No other properties exist;
    go into the prose of one step.
 3. **After a branch or a failure.** The flow continues with the node after
    the `decide` or `gate`, or after the failed step, unless the chosen `when` or the
-   `on-fail` reaches `end`. The flow ends after its last top-level node
+   `catch` reaches `end`. The flow ends after its last top-level node
    automatically, so use `end` for early exits only; a closing top-level `end`
    gives a warning. A node after `end` in the same block never runs
    and is an error. A `decide` with exactly one `when` has an implied second
@@ -80,7 +80,7 @@ A property is `key=value` after a node's arguments. No other properties exist;
    `input <name> "description"` is data the flow takes and
    `output [<name>] "description"` is a result it gives; the description is a
    quoted string. A flow `input` is what the user gives when the skill
-   starts. In a `step`, `decide`, `gate`, `when`, or `on-fail`,
+   starts. In a `step`, `decide`, `gate`, `when`, or `catch`,
    `output <name> "description"` is data that the skill produces there. In a
    `step`, `decide`, or `gate`, `input <name> "description"` is material that
    the skill asks the user for there (files, answers, facts): the skill acts,
@@ -95,14 +95,14 @@ A property is `key=value` after a node's arguments. No other properties exist;
    node that delivers a named flow `output` writes that name again. Data
    produced inside one
    `when` reaches the nodes after the `decide` or `gate` only when every
-   branch that continues produces it. An `on-fail` that continues counts as
+   branch that continues produces it. A `catch` that continues counts as
    recovered: the step's data stays available, and data made only inside the
-   `on-fail` stays there. An `output` in an `on-fail` names a named flow
+   `catch` stays there. An `output` in a `catch` names a named flow
    `output` that the recovery restores or replaces (a retry, a fallback, a
-   backup); a step in the `on-fail` that outputs it restores it too. When a
-   continuing `on-fail` does not restore a named flow `output` of its step,
+   backup); a step in the `catch` that outputs it restores it too. When a
+   continuing `catch` does not restore a named flow `output` of its step,
    the validator warns: that result exists only when the step succeeds.
-   Restore it with an `output`, or let the `on-fail` reach `end`. A named
+   Restore it with an `output`, or let the `catch` reach `end`. A named
    flow `output` must be available on every path that reaches
    the end of the flow; a path that stops at `end` needs
    none. A closing top-level `end` stops every path, so no named flow
@@ -120,10 +120,10 @@ A property is `key=value` after a node's arguments. No other properties exist;
    keep every name they gave and propose names only for new nodes. When a
    name no longer fits its node, recommend a new one; the user decides.
 7. **Nesting.** `step`, `decide`, `gate`, and any nested `phase` each add a
-   level; a top-level `phase`, `when`, and `on-fail` do not, so top-level
+   level; a top-level `phase`, `when`, and `catch` do not, so top-level
    phases organize the flow without eating into the 3-level limit, and a
-   step inside `on-fail` sits on its step's level. More than 3 levels gives
-   a warning outside an `on-fail`. To stay shallow, leave the branch that
+   step inside `catch` sits on its step's level. More than 3 levels gives
+   a warning outside a `catch`. To stay shallow, leave the branch that
    continues out of a yes/no `decide` and put its nodes after the `decide`
    (rule 3).
 8. **Files.** `file=` belongs only on a `by=code` step; its path is relative
@@ -214,7 +214,7 @@ blank lines. It never changes a word, a comment, or the order of the lines.
 - Lines end with a line feed, and the file has no byte order mark.
 
 `fmt` needs `{` at the end of its node's line and each `}` on its own line. A
-block on one line, such as `{ on-fail { end "x" } }`, stays on its line. It
+block on one line, such as `{ catch { end "x" } }`, stays on its line. It
 refuses a line that breaks this, and a `\` that nothing follows; the file
 then stays as it is.
 

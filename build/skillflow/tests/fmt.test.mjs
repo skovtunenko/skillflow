@@ -63,8 +63,8 @@ describe("formatFlow: layout", () => {
   });
 
   test("a continued line is one level deeper; a block on one line stays on its line", () => {
-    assert.equal(formatFlow('skillflow 1.0\nstep a by=llm \\\n"Prose."\nstep b by=llm { on-fail { end "x" } }\n'),
-      'skillflow 1.0\n\nstep a by=llm \\\n\t"Prose."\n\nstep b by=llm { on-fail { end "x" } }\n');
+    assert.equal(formatFlow('skillflow 1.0\nstep a by=llm \\\n"Prose."\nstep b by=llm { catch { end "x" } }\n'),
+      'skillflow 1.0\n\nstep a by=llm \\\n\t"Prose."\n\nstep b by=llm { catch { end "x" } }\n');
   });
 
   test("Windows line ends and a byte order mark go; a slashdashed node keeps its block", () => {
@@ -86,7 +86,7 @@ describe("formatFlow: layout", () => {
     for (const [flow, line] of [['skillflow 1.0\nstep a by=llm \\\n\nstep b by=llm\n', 2], ['skillflow 1.0\nphase p {\n\tstep b by=llm\n}\nstep a by=llm \\\n', 5], ['skillflow 1.0\nphase p {\n\tstep x by=llm\n\tstep a by=llm \\\n}\n', 4]])
       assert.throws(() => formatFlow(flow), (error) => error instanceof FormatError && error.line === line && /remove it/.test(error.hint), flow);
     // a `\\` that does continue its node is not the fault of a line with two `{`: the hint names the braces
-    assert.throws(() => formatFlow('skillflow 1.0\nstep a \\\n  by=llm "x" { on-fail {\n    end "y"\n  }\n}\n'), (error) => error instanceof FormatError && error.line === 2 && /own line/.test(error.hint));
+    assert.throws(() => formatFlow('skillflow 1.0\nstep a \\\n  by=llm "x" { catch {\n    end "y"\n  }\n}\n'), (error) => error instanceof FormatError && error.line === 2 && /own line/.test(error.hint));
   });
 
   test("a string that spans lines keeps a row that a `\\` continues with other indentation", () => {

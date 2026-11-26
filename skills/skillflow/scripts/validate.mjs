@@ -17,20 +17,20 @@ export const CHILDREN = {
   "": ["skillflow", "context", "phase", "step", "decide", "gate", "end"],
   context: ["input", "output", "invariant"],
   phase: ["phase", "step", "decide", "gate", "end"],
-  step: ["tools", "input", "output", "on-fail"],
+  step: ["tools", "input", "output", "catch"],
   decide: ["tools", "input", "output", "when"],
   gate: ["tools", "input", "output", "when"],
   when: ["phase", "step", "decide", "gate", "end", "output"],
-  "on-fail": ["step", "decide", "gate", "end", "output"],
+  "catch": ["step", "decide", "gate", "end", "output"],
 };
 export const PROPS = {skillflow: ["skill-version", "skillflow-version", "skill"], step: ["by", "file", "skill", "ref"], decide: ["by", "ref"],
   phase: ["ref"], gate: ["ref"], when: ["ref"], invariant: ["ref", "by"], input: ["ref"], output: ["ref"]};
 const REF_CHARS = 40; // grammar.md: a longer ref breaks when the label's tail is reworded
 // nodes whose input and output name one data item each; in context they declare the flow's own data
-const ACTIONS = new Set(["step", "decide", "gate", "when", "on-fail"]);
+const ACTIONS = new Set(["step", "decide", "gate", "when", "catch"]);
 // node -> [most positional arguments, index of its prose string or null]
 const ARGS = {skillflow: [1, null], context: [1, 0], phase: [2, 1], step: [2, 1], decide: [3, 2], gate: [3, 2],
-  when: [2, 1], "on-fail": [1, 0], end: [1, 0], input: [2, 1], output: [2, 1], invariant: [1, 0]};
+  when: [2, 1], "catch": [1, 0], end: [1, 0], input: [2, 1], output: [2, 1], invariant: [1, 0]};
 const SAME_ENDS = 3; // authoring.md: a failure that several steps handle the same way is one invariant
 const PROSE_CHARS = 200, PROSE_ITEMS = 5; // authoring.md: the intent in a sentence or two, or one list of five items
 const FLOW_SHARE = 50, FLOW_SMALL = 4000; // a flow under FLOW_SMALL characters is short whatever the skill's size; percent of SKILL.md's size above which the flow is no longer a short view of the skill
@@ -38,7 +38,7 @@ export const READ_LIMIT = 5_000_000; // bytes: the cap of the bulk file scans (m
 // JavaScript \w and \b are ASCII; W is the Unicode word class for names in any language
 export const W = "\\p{L}\\p{N}_";
 export const FAILURE = new RegExp(`(?<![${W}])(fail|die|error)\\s*\\(|(?<![${W}])raise [${W}]|sys\\.exit\\(\\s*[^0)\\s]|(?<![${W}])exit [1-9]|file=sys\\.stderr|console\\.error|(?<![${W}])throw [${W}]|process\\.exit\\(\\s*[^0)\\s]|process\\.exitCode\\s*=\\s*[1-9]`, "u");
-const STOPS = new RegExp(`(?<![${W}])(end|stop)(s|ed|ped)?[^${W}]*$`, "iu"); // an on-fail item that ends the flow: "…, then end.", "…; the run ends."
+const STOPS = new RegExp(`(?<![${W}])(end|stop)(s|ed|ped)?[^${W}]*$`, "iu"); // a catch item that ends the flow: "…, then end.", "…; the run ends."
 const CONTINUES = new RegExp(`(?<![${W}])continu`, "iu");
 const SCRIPT = new RegExp(`(?<![${W}/.-])(?:scripts/)?((?:[${W}-]+/)*[${W}-]+\\.(?:py|sh|js|mjs|ts))(?![${W}])`, "gu");
 // a script file that an invariant names, at any path: scripts/lib/check.py, tools/check.rb, .git/hooks/pre-commit.sh
@@ -273,10 +273,10 @@ export function check(flowPath, skillDir, draft = false) {
 
   const names = new Map(), tools = new Map(), written = new Map(), described = new Set(), used = new Set(), missingSkill = [], refs = new Map();
   const spellings = new Map(), casePairs = new Set(); // lower-case tool name -> [first spelling, its line]; spelling pairs already warned
-  // a script that an invariant names has its shared failure handling there, so a step that runs it needs no on-fail of its own
+  // a script that an invariant names has its shared failure handling there, so a step that runs it needs no catch of its own
   const shared = new Set(doc.nodes.filter((node) => node.getName() === "context").flatMap(kids).filter((kid) => kid.getName() === "invariant")
     .flatMap((kid) => [...String(argsProps(kid)[0][0] ?? "").matchAll(SCRIPT)].map((match) => "scripts/" + match[1])));
-  const sameEnds = new Map(); // end reason -> [[on-fail line, the scripts its step runs]] of each on-fail that holds only that end
+  const sameEnds = new Map(); // end reason -> [[catch line, the scripts its step runs]] of each catch that holds only that end
   const proseSizes = []; // [line, characters] of each node's prose, so the size warning can name the longest
   const stats = {phase: 0, step: 0, decide: 0, end: 0, by: {}, invariants: {code: 0, human: 0, llm: 0, unstated: 0}};
   const humanRules = []; // lines of the by=human invariants: each needs a gate or a by=human node somewhere in the flow
@@ -408,32 +408,32 @@ export function check(flowPath, skillDir, draft = false) {
       }
     }
     if (name === "when" && (!args.length || !isName(args[0]))) report.error(line, "`when` needs an outcome word", "when yes, when no, when skipped");
-    if (name === "step" && children.filter((kid) => kid.getName() === "on-fail").length > 1) report.error(line, "`step` has more than one `on-fail`", "merge them into one");
-    if (name === "on-fail" && !args.length && !children.some((kid) => FLOW.has(kid.getName()))) report.gap(line, "`on-fail` is empty", 'say what happens: prose, steps, or end "reason"');
-    if (name === "on-fail") {
-      // failure items: the on-fail's own prose and the prose of its child steps
+    if (name === "step" && children.filter((kid) => kid.getName() === "catch").length > 1) report.error(line, "`step` has more than one `catch`", "merge them into one");
+    if (name === "catch" && !args.length && !children.some((kid) => FLOW.has(kid.getName()))) report.gap(line, "`catch` is empty", 'say what happens: prose, steps, or end "reason"');
+    if (name === "catch") {
+      // failure items: the catch's own prose and the prose of its child steps
       const texts = args.length ? [String(args[0])] : [];
       for (const kid of children) { const kidArgs = argsProps(kid)[0]; if (kid.getName() === "step" && kidArgs.length > 1) texts.push(String(kidArgs[1])); }
       if (children.some((kid) => kid.getName() === "end") && texts.some((text) => CONTINUES.test(text)))
-        report.warn(line, "`on-fail` holds an `end`, but its prose says the flow continues", "put the end in a `decide` on the condition that separates stopping items from continuing ones");
+        report.warn(line, "`catch` holds an `end`, but its prose says the flow continues", "put the end in a `decide` on the condition that separates stopping items from continuing ones");
       const items = texts.flatMap(proseItems);
       if (items.length && items.every((item) => STOPS.test(item)) && ![...descendants(node)].some((kid) => kid.getName() === "end"))
-        report.warn(line, "every item of `on-fail` stops the flow, but it holds no `end`", 'add end "reason" inside the on-fail');
+        report.warn(line, "every item of `catch` stops the flow, but it holds no `end`", 'add end "reason" inside the catch');
     }
     if (name === "step") {
       // a script named in prose counts too: `scripts/x.sh` or a bare `x.sh` under scripts/
       const named = new Set([...(args.length > 1 ? String(args[1]) : "").matchAll(SCRIPT)].map((match) => "scripts/" + match[1]));
       if (props.has("file")) named.add(String(props.get("file")));
-      const onFail = children.find((kid) => kid.getName() === "on-fail"), stops = onFail ? kids(onFail).filter((kid) => FLOW.has(kid.getName())) : [];
-      // an on-fail that only ends the flow: deleting it loses no node, so equal reasons can become one invariant
+      const caught = children.find((kid) => kid.getName() === "catch"), stops = caught ? kids(caught).filter((kid) => FLOW.has(kid.getName())) : [];
+      // a catch that only ends the flow: deleting it loses no node, so equal reasons can become one invariant
       if (stops.length === 1 && stops[0].getName() === "end") {
         const why = squash(String(argsProps(stops[0])[0][0] ?? "")).toLowerCase().replace(/[.!\s]+$/u, "");
-        if (why) sameEnds.set(why, [...(sameEnds.get(why) ?? []), [lineOf(onFail), [...named]]]);
+        if (why) sameEnds.set(why, [...(sameEnds.get(why) ?? []), [lineOf(caught), [...named]]]);
       }
-      for (const script of onFail || skillDir === null ? [] : [...named].filter((script) => !shared.has(script)).sort()) {
+      for (const script of caught || skillDir === null ? [] : [...named].filter((script) => !shared.has(script)).sort()) {
         const path = join(skillDir, script), size = statOrNull(path);
         if (!script.split("/").includes("..") && size?.isFile() && size.size <= READ_LIMIT && FAILURE.test(readText(path) ?? "")) {
-          report.warn(line, `\`${script}\` has failure messages, but the step has no \`on-fail\``, "give each failure the skill handles an on-fail item with its next node or end; a failure that several steps share is one invariant that names the script");
+          report.warn(line, `\`${script}\` has failure messages, but the step has no \`catch\``, "give each failure the skill handles a catch item with its next node or end; a failure that several steps share is one invariant that names the script");
           break;
         }
       }
@@ -479,8 +479,8 @@ export function check(flowPath, skillDir, draft = false) {
         }
       }
     }
-    // a recovery is a side path: what an on-fail holds stays on its step's level, so its decide adds no depth warning
-    for (const kid of children) walk(kid, name, name === "on-fail" ? level - 1 : level, failing || name === "on-fail");
+    // a recovery is a side path: what a catch holds stays on its step's level, so its decide adds no depth warning
+    for (const kid of children) walk(kid, name, name === "catch" ? level - 1 : level, failing || name === "catch");
   }
 
   const nodes = doc.nodes;
@@ -514,15 +514,15 @@ export function check(flowPath, skillDir, draft = false) {
   for (const uses of sameEnds.values()) {
     if (uses.length < SAME_ENDS) continue;
     const scripts = [...new Set(uses.flatMap(([, named]) => named))].sort();
-    report.warn(uses[0][0], `${uses.length} \`on-fail\` blocks (lines ${uses.map(([at]) => at).join(", ")}) end the flow with the same reason`,
-      `write one \`invariant\` that says where this failure goes${scripts.length ? `, naming ${scripts.join(", ")}` : ""}, and delete these on-fail blocks; an on-fail holds only a failure that is its step's own`);
+    report.warn(uses[0][0], `${uses.length} \`catch\` blocks (lines ${uses.map(([at]) => at).join(", ")}) end the flow with the same reason`,
+      `write one \`invariant\` that says where this failure goes${scripts.length ? `, naming ${scripts.join(", ")}` : ""}, and delete these catch blocks; a catch holds only a failure that is its step's own`);
   }
   // the node that delivers a named flow output may write it although the name exists (a flow input it updates)
   const resultNames = new Set(results.map(([item]) => item));
   for (const [item, [line]] of written) if (!origins.has(item)) origins.set(item, line);
   const atEnd = follow(nodes, new Set(inputs), report, {results: resultNames, origins});
   const closing = nodes.at(-1)?.getName() === "end" ? nodes.at(-1) : null; // a top-level `end` after the last node
-  // strict pass: a continuing on-fail keeps only the data it restores; what it finds beyond the first pass is a warning
+  // strict pass: a continuing catch keeps only the data it restores; what it finds beyond the first pass is a warning
   const strict = new Report(flowPath), strictEnd = trace(nodes, {have: new Set(inputs), lost: new Map()}, {report: strict, results: resultNames, origins: new Map()});
   // a named flow output leaves the flow at its end: every path that reaches the end must have produced it; `end` stops a path early
   // a flow input of the same name is the old state, not the result: a node must produce the result
@@ -617,10 +617,10 @@ function checkSize(report, text, skillDir, proseSizes) {
   }
 }
 
-/** Data that a `when` or an `on-fail` outputs itself, with no node of its own. */
+/** Data that a `when` or a `catch` outputs itself, with no node of its own. */
 const ownOutputs = (node) => new Set(kids(node).filter((kid) => kid.getName() === "output").flatMap(values));
-const onlyWhen = (step) => (step === undefined ? "exists only when an earlier step succeeds" : `exists only when step \`${step}\` succeeds`) + ": its `on-fail` continues without it";
-const restoreHint = (item) => `add \`output ${item}\` to that on-fail when the recovery gives it, or let the on-fail reach \`end\``;
+const onlyWhen = (step) => (step === undefined ? "exists only when an earlier step succeeds" : `exists only when step \`${step}\` succeeds`) + ": its `catch` continues without it";
+const restoreHint = (item) => `add \`output ${item}\` to that catch when the recovery gives it, or let the catch reach \`end\``;
 
 /** The state where several paths meet: data that all of them have, and the drops recorded on any of them. */
 function merge(states) {
@@ -642,8 +642,8 @@ const firstAt = (origins, item, line) => (origins.has(item) && origins.get(item)
 
 /**
  * follow() with path state {have, lost} and the run's {report, results}; returns the state after the block, or null when the block always ends.
- * An on-fail that continues counts as recovered: the step's data stays available after it (grammar rule 5).
- * In the strict pass `lost` is a Map: a step keeps only the data that its continuing on-fail also has, and `lost`
+ * A catch that continues counts as recovered: the step's data stays available after it (grammar rule 5).
+ * In the strict pass `lost` is a Map: a step keeps only the data that its continuing catch also has, and `lost`
  * maps each dropped name to that step, along the paths that carry the drop. check() runs this pass for warnings.
  */
 function trace(nodes, at, run) {
@@ -670,7 +670,7 @@ function trace(nodes, at, run) {
       }
       // data produced again replaces an earlier drop
       after = {have: at.have.union(written), lost: at.lost && new Map([...at.lost].filter(([item]) => !written.has(item)))};
-      for (const kid of kids(node)) if (kid.getName() === "on-fail") {
+      for (const kid of kids(node)) if (kid.getName() === "catch") {
         // the handler starts without the step's data; its own outputs are what the recovery restores
         const handled = trace(kids(kid), {have: at.have.union(ownOutputs(kid)), lost: at.lost}, run);
         if (after.lost && handled !== null) for (const item of after.have.difference(handled.have)) {

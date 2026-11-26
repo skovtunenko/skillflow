@@ -181,7 +181,7 @@
     var failBtn = button('tb', [glyph('fail'), 'Failures', add(el('span', 'n'), String(footFails))], function () {
       state.failPaths = !state.failPaths; failBtn.setAttribute('aria-pressed', String(state.failPaths)); relayout();
     });
-    tipped(failBtn, 'Draw the ' + plural(footFails, 'short on-fail') + ' as cards of their own; off, each is a footnote of its step');
+    tipped(failBtn, 'Draw the ' + footFails + (footFails === 1 ? ' short catch' : ' short catches') + ' as cards of their own; off, each is a footnote of its step');
     failBtn.setAttribute('aria-pressed', String(!!state.failPaths));
     tgroup(failBtn);
   }
@@ -222,7 +222,7 @@
   var legend = el('div', 'legend'); legend.setAttribute('aria-hidden', 'true');
   function sample(shape) { var s = document.createElementNS(SVGNS, 'svg'); s.setAttribute('width', 24); s.setAttribute('height', 10); s.appendChild(shape); return s; }
   var lines = el('div', 'lg'), roles = el('div', 'lg');
-  [['', 'flow'], ['fail', 'on fail'], ['implied', 'implied outcome']].forEach(function (l) {
+  [['', 'flow'], ['fail', 'catch'], ['implied', 'implied outcome']].forEach(function (l) {
     lines.appendChild(add(el('span'), sample(svgEl('line', { x1: 1, y1: 5, x2: 23, y2: 5, 'class': 'e ' + l[0] })), document.createTextNode(l[1])));
   });
   lines.appendChild(add(el('span'), sample(svgEl('circle', { cx: 12, cy: 5, r: 4, 'class': 'join' })), document.createTextNode('rejoin')));
@@ -281,7 +281,7 @@
         if (EXEC[n.by]) st.mix[n.by]++;
         if (n.kind === 'gate' || n.by === 'human') st.asks++;
         out(n.outputs);
-        if (n.onfail) { st.cards.push(n.onfail.id); out(n.onfail.outputs); walk(n.onfail.children); }
+        if (n.catch) { st.cards.push(n.catch.id); out(n.catch.outputs); walk(n.catch.children); }
         (n.whens || []).forEach(function (w) { out(w.outputs); walk(w.children); });
       });
     })(st.items);

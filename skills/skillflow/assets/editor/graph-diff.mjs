@@ -5,7 +5,7 @@ export function* walk(nodes, parent = "") {
   for (const node of nodes) {
     yield [node.name ? `${node.kind}:${node.name}` : `${node.kind}:${parent}:${node.text ?? node.prose ?? ""}`, node];
     yield* walk(node.children ?? [], node.name ?? parent);
-    if (node.onfail) { yield [`onfail:${node.name}`, node.onfail]; yield* walk(node.onfail.children, node.name); }
+    if (node.catch) { yield [`catch:${node.name}`, node.catch]; yield* walk(node.catch.children, node.name); }
     for (const branch of node.whens ?? []) yield* walk(branch.children, `${node.name}/${branch.outcome}`);
   }
 }

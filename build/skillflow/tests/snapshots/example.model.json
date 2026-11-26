@@ -97,9 +97,9 @@
      "outputs": [
       "changes"
      ],
-     "onfail": {
+     "catch": {
       "id": "n3",
-      "kind": "onfail",
+      "kind": "catch",
       "line": 20,
       "prose": "",
       "unclear": [],
@@ -158,7 +158,7 @@
           "highlights"
          ],
          "outputs": [],
-         "onfail": null
+         "catch": null
         }
        ],
        "ends": false
@@ -206,7 +206,7 @@
      "outputs": [
       "draft"
      ],
-     "onfail": null
+     "catch": null
     },
     {
      "id": "n11",
@@ -222,7 +222,7 @@
      "tools": [],
      "inputs": [],
      "outputs": [],
-     "onfail": null
+     "catch": null
     },
     {
      "id": "n12",
@@ -287,9 +287,9 @@
      "outputs": [
       "changelog"
      ],
-     "onfail": {
+     "catch": {
       "id": "n16",
-      "kind": "onfail",
+      "kind": "catch",
       "line": 63,
       "prose": "",
       "unclear": [],
@@ -310,7 +310,7 @@
         "tools": [],
         "inputs": [],
         "outputs": [],
-        "onfail": null
+        "catch": null
        },
        {
         "id": "n18",
@@ -337,9 +337,9 @@
      "tools": [],
      "inputs": [],
      "outputs": [],
-     "onfail": {
+     "catch": {
       "id": "n20",
-      "kind": "onfail",
+      "kind": "catch",
       "line": 72,
       "prose": "The notes stay in CHANGELOG.md only.",
       "unclear": [],
@@ -488,6 +488,6 @@
    "node": "n12"
   }
  ],
- "sourceText": "skillflow 1.0 skill-version=\"1.2\" skillflow-version=\"2026.11.20.1\"\n\ncontext \"Drafts release notes for a git tag and adds them to CHANGELOG.md.\" {\n\tinput tag \"the git tag to describe\"\n\tinput changelog \"the project's existing CHANGELOG.md\"\n\n\toutput changelog \"a new section in CHANGELOG.md\"\n\toutput \"a one-line summary in the chat\"\n\n\tinvariant by=human \"nothing is published without the user's approval\"\n\tinvariant by=code \"collect.sh stops the flow when the tag does not exist\"\n\tinvariant by=llm \"no commit is changed during the flow\"\n}\n\nphase gather \"Find what changed since the last tag.\" {\n\tstep collect-changes by=code file=\"scripts/collect.sh\" {\n\t\ttools gh /* the GitHub CLI */\n\t\toutput changes \"the commits and pull requests since the last tag\"\n\n\t\ton-fail {\n\t\t\tend \"report that the tag does not exist\"\n\t\t}\n\t}\n\n\tdecide size \"Is this a major release?\" by=llm {\n\t\toutput size \"major or regular\"\n\n\t\twhen major {\n\t\t\tstep ask-highlights by=llm \"Ask which changes come first.\" {\n\t\t\t\tinput highlights \"the changes that the user wants at the top\"\n\t\t\t}\n\t\t}\n\n\t\twhen regular \"The notes have no highlights.\"\n\t}\n}\n\nphase write ref=\"S2\" {\n\tstep draft by=llm \"\"\"\n\t\tGroup the changes **by type**:\n\t\t- features\n\t\t- fixes\n\n\t\tLeave out internal refactors. Revise the draft until the user approves it or stops.\n\t\t\"\"\" {\n\t\ttools (agent)editor (mcp)jira\n\t\toutput draft \"the release notes before approval\"\n\t}\n\n\tstep polish by=llm skill=style-guide \"Apply the style guide to the draft.\"\n\n\t// ? The skill does not say how many revision rounds are allowed (SKILL.md:24).\n\tgate approved \"Did the user approve the draft?\" {\n\t\twhen rejected {\n\t\t\tend \"the user stopped without approval\"\n\t\t}\n\t}\n\n\t// From here on the flow writes files.\n\tstep publish by=code {\n\t\toutput changelog\n\n\t\ton-fail {\n\t\t\tstep report-error by=llm \"Show the error and leave CHANGELOG.md unchanged.\"\n\t\t\tend \"CHANGELOG.md stays unchanged\"\n\t\t}\n\t}\n\n\t/- step tweet by=llm \"Post the notes.\"\n\n\tstep announce by=human #\"The user posts the \"What's new\" section to the team channel.\"# {\n\t\ton-fail \"The notes stay in CHANGELOG.md only.\"\n\t}\n}\n",
+ "sourceText": "skillflow 1.0 skill-version=\"1.2\" skillflow-version=\"2026.11.20.1\"\n\ncontext \"Drafts release notes for a git tag and adds them to CHANGELOG.md.\" {\n\tinput tag \"the git tag to describe\"\n\tinput changelog \"the project's existing CHANGELOG.md\"\n\n\toutput changelog \"a new section in CHANGELOG.md\"\n\toutput \"a one-line summary in the chat\"\n\n\tinvariant by=human \"nothing is published without the user's approval\"\n\tinvariant by=code \"collect.sh stops the flow when the tag does not exist\"\n\tinvariant by=llm \"no commit is changed during the flow\"\n}\n\nphase gather \"Find what changed since the last tag.\" {\n\tstep collect-changes by=code file=\"scripts/collect.sh\" {\n\t\ttools gh /* the GitHub CLI */\n\t\toutput changes \"the commits and pull requests since the last tag\"\n\n\t\tcatch {\n\t\t\tend \"report that the tag does not exist\"\n\t\t}\n\t}\n\n\tdecide size \"Is this a major release?\" by=llm {\n\t\toutput size \"major or regular\"\n\n\t\twhen major {\n\t\t\tstep ask-highlights by=llm \"Ask which changes come first.\" {\n\t\t\t\tinput highlights \"the changes that the user wants at the top\"\n\t\t\t}\n\t\t}\n\n\t\twhen regular \"The notes have no highlights.\"\n\t}\n}\n\nphase write ref=\"S2\" {\n\tstep draft by=llm \"\"\"\n\t\tGroup the changes **by type**:\n\t\t- features\n\t\t- fixes\n\n\t\tLeave out internal refactors. Revise the draft until the user approves it or stops.\n\t\t\"\"\" {\n\t\ttools (agent)editor (mcp)jira\n\t\toutput draft \"the release notes before approval\"\n\t}\n\n\tstep polish by=llm skill=style-guide \"Apply the style guide to the draft.\"\n\n\t// ? The skill does not say how many revision rounds are allowed (SKILL.md:24).\n\tgate approved \"Did the user approve the draft?\" {\n\t\twhen rejected {\n\t\t\tend \"the user stopped without approval\"\n\t\t}\n\t}\n\n\t// From here on the flow writes files.\n\tstep publish by=code {\n\t\toutput changelog\n\n\t\tcatch {\n\t\t\tstep report-error by=llm \"Show the error and leave CHANGELOG.md unchanged.\"\n\t\t\tend \"CHANGELOG.md stays unchanged\"\n\t\t}\n\t}\n\n\t/- step tweet by=llm \"Post the notes.\"\n\n\tstep announce by=human #\"The user posts the \"What's new\" section to the team channel.\"# {\n\t\tcatch \"The notes stay in CHANGELOG.md only.\"\n\t}\n}\n",
  "example": null
 }

@@ -26,6 +26,7 @@ const errors = (body, dir) => run(body, dir).errors.map(([line, message]) => `${
 
 test("rules that only this file guards", () => {
   const cases = [
+    ['step a by=llm {\n    on-fail "x"\n}\n', "3 `on-fail` is not allowed inside `step`"],
     ['step a by=llm {\n    tools\n}\n', "3 `tools` lists nothing"],
     ['step a by=llm {\n    tools "two words"\n}\n', "3 `two words` in `tools` is not a bare word"],
     ['context {\n    output 5\n}\n', "3 `output` takes a sentence, or a name and a sentence"],
@@ -117,7 +118,7 @@ test("syntax and placement hints name the cause", () => {
   assert.match(hints('step a by=llm "x\nmore"\n'), /^a "…" string ends on its line/);
   assert.match(hints('step a by=llm """x"""\n'), /^a """ string spans lines/);
   // a node indented under another without { } is read at the top level: the hint says where it belongs
-  assert.match(hints('step a by=llm "x"\n    output notes "n"\n'), /`output` belongs in context, step, decide, gate, when, on-fail: put it in the \{ \} block of such a node$/);
+  assert.match(hints('step a by=llm "x"\n    output notes "n"\n'), /`output` belongs in context, step, decide, gate, when, catch: put it in the \{ \} block of such a node$/);
   assert.doesNotMatch(hints("phase p {\n    loop x\n}\n"), /belongs in/);
 });
 

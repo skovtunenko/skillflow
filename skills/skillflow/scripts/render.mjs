@@ -70,7 +70,7 @@ class Builder {
     if (!users.includes(id)) users.push(id);
   }
 
-  /** Names that a `when` or an `on-fail` outputs itself, each once; `producer` is the card credited with them. */
+  /** Names that a `when` or a `catch` outputs itself, each once; `producer` is the card credited with them. */
   ownOutputs(node, producer) {
     const names = [];
     for (const kid of kids(node).filter((kid) => kid.getName() === "output")) {
@@ -136,15 +136,15 @@ class Builder {
     }
     this.flat.push(out);
     if (kind === "step") {
-      const fail = kids(node).find((kid) => kid.getName() === "on-fail");
-      out.onfail = null;
+      const fail = kids(node).find((kid) => kid.getName() === "catch");
+      out.catch = null;
       if (fail) {
         const id = this.newId();
-        out.onfail = {id, kind: "onfail", line: lineOf(fail), prose: textAt(argsProps(fail)[0], 0), unclear: this.notes(fail, id), step: out.id,
-          // what the recovery restores: the on-fail card produces it
+        out.catch = {id, kind: "catch", line: lineOf(fail), prose: textAt(argsProps(fail)[0], 0), unclear: this.notes(fail, id), step: out.id,
+          // what the recovery restores: the catch card produces it
           outputs: this.ownOutputs(fail, id)};
-        out.onfail.children = this.block(kids(fail));
-        out.onfail.ends = ends(kids(fail));
+        out.catch.children = this.block(kids(fail));
+        out.catch.ends = ends(kids(fail));
       }
     } else {
       out.whens = [];
@@ -291,7 +291,7 @@ function* descendants(nodes) {
   for (const node of nodes) {
     yield node;
     yield* descendants(node.children ?? []);
-    if (node.onfail) { yield node.onfail; yield* descendants(node.onfail.children); }
+    if (node.catch) { yield node.catch; yield* descendants(node.catch.children); }
     for (const branch of node.whens ?? []) yield* descendants(branch.children);
   }
 }

@@ -1,7 +1,7 @@
 skillflow 1.0
 
 step collect-changes by=code {
-	on-fail {
+	catch {
 		end "the tag does not exist"
 	}
 }

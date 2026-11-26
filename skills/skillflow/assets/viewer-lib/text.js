@@ -59,7 +59,7 @@ var sfText = (function () {
         var k = n.kind === 'gate' ? 'decide' : n.kind;
         if (c[k] != null) c[k]++;
         if (n.children) walk(n.children);
-        if (n.onfail) walk(n.onfail.children);
+        if (n.catch) walk(n.catch.children);
         (n.whens || []).forEach(function (w) { walk(w.children); });
       });
     })(list);

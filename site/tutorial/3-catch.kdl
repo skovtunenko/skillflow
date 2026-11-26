@@ -1,8 +1,8 @@
-// Plan the failure | on-fail says what happens when a step fails; end stops the flow.
+// Plan the failure | catch says what happens when a step fails; end stops the flow.
 skillflow 1.0
 
 step collect-changes by=code "Run collect.sh for the tag." {
-	on-fail {
+	catch {
 		end "the tag does not exist"
 	}
 }

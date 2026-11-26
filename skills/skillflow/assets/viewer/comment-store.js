@@ -7,7 +7,7 @@
   Object.keys(byId).forEach(function (id) {
     var n = byId[id];
     if (id.charAt(0) !== 'n' || n.kind === 'when') return;  // x-ids belong to the Help example; a branch is not a card of its own
-    var t = { kind: n.kind === 'onfail' ? 'on-fail' : n.kind, name: n.kind === 'onfail' ? byId[n.step].name : n.kind === 'end' ? '' : n.name,
+    var t = { kind: n.kind, name: n.kind === 'catch' ? byId[n.step].name : n.kind === 'end' ? '' : n.name,
       text: n.kind === 'end' ? n.text || '' : '', line: n.line, id: id };
     var k = t.kind + ':' + (t.name || plain(t.text));
     seenAnchor[k] = (seenAnchor[k] || 0) + 1;

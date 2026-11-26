@@ -97,7 +97,7 @@
   function title(n) {
     if (!n) return '';
     if (n.kind === 'end') return 'end';
-    if (n.kind === 'onfail') return 'on fail · ' + title(byId[n.step]);
+    if (n.kind === 'catch') return 'catch · ' + title(byId[n.step]);
     if (n.kind === 'when') return n.outcome;
     return n.name || n.kind;
   }

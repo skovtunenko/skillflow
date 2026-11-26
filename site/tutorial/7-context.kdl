@@ -13,7 +13,7 @@ phase gather {
 	step collect-changes by=code "Run collect.sh for the tag." {
 		output changes "the commits since the last tag"
 
-		on-fail {
+		catch {
 			end "the tag does not exist"
 		}
 	}

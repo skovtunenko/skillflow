@@ -506,15 +506,15 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     assert.deepEqual(got, {closed: true, focused: true, badge: "var(--fail)", filtered: 1, deleted: 1, restored: 2, draft: "keep me"});
   });
 
-  test("a one-line on-fail is a footnote until Failures is on; zooming out shows names, then phase tiles", async (t) => {
+  test("a one-line catch is a footnote until Failures is on; zooming out shows names, then phase tiles", async (t) => {
     if (unavailable) return t.skip(unavailable);
-    const flow = 'skillflow 1.0\n\nphase work {\n    step run by=code "Run the full verification command: type-check, build, run every check, and report each failure with its file, its line, and the fix it needs." {\n        on-fail "- Retry once, then continue."\n    }\n    step next by=llm "Go on."\n}\n';
+    const flow = 'skillflow 1.0\n\nphase work {\n    step run by=code "Run the full verification command: type-check, build, run every check, and report each failure with its file, its line, and the fix it needs." {\n        catch "- Retry once, then continue."\n    }\n    step next by=llm "Go on."\n}\n';
     const page = await (await fresh()).open(url(render(tmp, flow, "footnote")));
     const got = await page.eval(`(() => {
       const q = (s) => document.querySelectorAll(s).length, out = {};
-      out.off = { cards: q('.node.k-onfail'), note: document.querySelector('.nfail .ft').textContent };
+      out.off = { cards: q('.node.k-catch'), note: document.querySelector('.nfail .ft').textContent };
       const btn = [...document.querySelectorAll('.tools .tb, .tmenu .tb')].find((b) => b.textContent.startsWith('Failures')); btn.click();
-      out.on = { cards: q('.node.k-onfail'), notes: q('.nfail'), pressed: btn.getAttribute('aria-pressed') };
+      out.on = { cards: q('.node.k-catch'), notes: q('.nfail'), pressed: btn.getAttribute('aria-pressed') };
       btn.click();
       const vp = document.querySelector('.viewport'), canvas = document.querySelector('.canvas'), seen = [canvas.dataset.lod];
       for (let i = 0; i < 12; i++) { vp.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true })); if (seen[seen.length - 1] !== canvas.dataset.lod) seen.push(canvas.dataset.lod); }
@@ -527,22 +527,22 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     assert.deepEqual(got, {off: {cards: 0, note: "Retry once, then continue."}, on: {cards: 1, notes: 0, pressed: "true"}, levels: ["full", "name", "phase"], far: {tile: "grid", card: "hidden"}, near: true});
   });
 
-  test("an on-fail that holds only an end is a stop footnote; Failures draws its on-fail and end cards", async (t) => {
+  test("a catch that holds only an end is a stop footnote; Failures draws its catch and end cards", async (t) => {
     if (unavailable) return t.skip(unavailable);
-    const flow = 'skillflow 1.0\n\nstep fetch by=code "Fetch the data." {\n    on-fail "The network is down." {\n        end "Report the outage."\n    }\n}\nstep bare by=code "Check it." {\n    on-fail {\n        end\n    }\n}\nstep next by=llm "Go on." {\n    on-fail "Stop." {\n        step tell by=llm "Tell the user."\n        end "told"\n    }\n}\n';
+    const flow = 'skillflow 1.0\n\nstep fetch by=code "Fetch the data." {\n    catch "The network is down." {\n        end "Report the outage."\n    }\n}\nstep bare by=code "Check it." {\n    catch {\n        end\n    }\n}\nstep next by=llm "Go on." {\n    catch "Stop." {\n        step tell by=llm "Tell the user."\n        end "told"\n    }\n}\n';
     const page = await (await fresh()).open(url(render(tmp, flow, "footnote-end")));
     const got = await page.eval(`(() => {
       const q = (s) => document.querySelectorAll(s).length, out = {};
       const notes = () => [...document.querySelectorAll('.nfail')].map((d) => d.querySelector('.how').textContent + ' | ' + d.querySelector('.ft').textContent);
       const btn = [...document.querySelectorAll('.tools .tb, .tmenu .tb')].find((b) => b.textContent.startsWith('Failures'));
-      out.off = { fails: q('.node.k-onfail'), ends: q('.node.k-end'), notes: notes(), count: btn.textContent };
+      out.off = { fails: q('.node.k-catch'), ends: q('.node.k-end'), notes: notes(), count: btn.textContent };
       btn.click();
-      out.on = { fails: q('.node.k-onfail'), ends: q('.node.k-end'), notes: notes().length };
+      out.on = { fails: q('.node.k-catch'), ends: q('.node.k-end'), notes: notes().length };
       btn.click();
       // the footnoted end still has a place: a link to it lands on its step
       out.check = Object.keys(window.skillflow.check()).filter((k) => k !== 'size' && window.skillflow.check()[k].length);
       return out; })()`);
-    assert.deepEqual(got, {off: {fails: 1, ends: 1, notes: ["■ on fail → stop | Report the outage.", "■ on fail → stop | the flow stops"], count: "Failures2"},
+    assert.deepEqual(got, {off: {fails: 1, ends: 1, notes: ["■ catch → stop | Report the outage.", "■ catch → stop | the flow stops"], count: "Failures2"},
       on: {fails: 3, ends: 3, notes: 0}, check: []});
   });
 
@@ -743,7 +743,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     }
   });
 
-  const SCENARIO = 'skillflow 1.0\n\ndecide mode "Help or build?" by=llm {\n    when help {\n        step explain by=llm "Explain."\n        end "answered"\n    }\n    when build "Go straight on."\n}\nstep draft by=llm "Draft it."\ngate approve "Approve the draft?"\nstep ship by=code "Ship." {\n    on-fail "Stop and report." {\n        end "shipping failed"\n    }\n}\n';
+  const SCENARIO = 'skillflow 1.0\n\ndecide mode "Help or build?" by=llm {\n    when help {\n        step explain by=llm "Explain."\n        end "answered"\n    }\n    when build "Go straight on."\n}\nstep draft by=llm "Draft it."\ngate approve "Approve the draft?"\nstep ship by=code "Ship." {\n    catch "Stop and report." {\n        end "shipping failed"\n    }\n}\n';
   // the run, its summary, and the graph after each pick; a pick comes from the panel or from an outcome label in the graph
   const RUN = `(() => { const q = (s) => [...document.querySelectorAll(s)];
     return { rows: q('.scl .sc-row').map((r) => r.querySelector('.sc-n').textContent + ':' + r.querySelector('.sc-t').textContent),
@@ -755,7 +755,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
   test("Scenario: one run with a pick at each branch point; the graph numbers the run and dims the rest", async (t) => {
     if (unavailable) return t.skip(unavailable);
     const page = await (await fresh()).open(url(render(tmp, SCENARIO, "scenario")));
-    // Failures on: the on-fail of ship draws its own lane, so the graph has its ok and on fail labels
+    // Failures on: the catch of ship draws its own lane, so the graph has its ok and catch labels
     await page.eval(`[...document.querySelectorAll('.tools .tb, .tmenu .tb')].find((b) => b.textContent.startsWith('Failures')).click(); document.querySelector('.scnbtn').click()`);
     // default: the first outcome that goes on; a step does not fail
     assert.deepEqual(await page.eval(RUN), {rows: ["1:mode", "2:draft", "3:approve", "4:ship", ":done"], facts: "4 steps · 1 asks you · reaches DONE",
@@ -766,16 +766,16 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     // the outcome label in the graph picks too
     await page.eval(`[...document.querySelectorAll('.elabel.alt')].find((l) => l.textContent === 'build').click()`);
     await page.eval(pick("revise"));
-    await page.eval(pick("on fail"));
-    assert.deepEqual(await page.eval(RUN), {rows: ["1:mode", "2:draft", "3:approve", ":revise", "4:ship", "5:on fail", ":end"], facts: "5 steps · 2 ask you · 1 repeat · stops on a failure",
-      nums: ["1", "2", "3", "4", "5"], picked: ["build", "approved", "revise", "on fail"], dimmed: ["explain"], lit: true});
+    await page.eval(pick("catch"));
+    assert.deepEqual(await page.eval(RUN), {rows: ["1:mode", "2:draft", "3:approve", ":revise", "4:ship", "5:catch", ":end"], facts: "5 steps · 2 ask you · 1 repeat · stops on a failure",
+      nums: ["1", "2", "3", "4", "5"], picked: ["build", "approved", "revise", "catch"], dimmed: ["explain"], lit: true});
     assert.equal(await page.eval(`document.querySelector('.sc-rep .sc-p').textContent`), "Redo the work before approve, then approve asks again.");
-    // with Failures off, an on-fail that holds only an end is a footnote of its step: the step's card stands for both numbers
+    // with Failures off, a catch that holds only an end is a footnote of its step: the step's card stands for both numbers
     const foot = await chrome.open(url(render(tmp, SCENARIO, "scenario-foot")));
-    await foot.eval(`document.querySelector('.scnbtn').click(); ${pick("on fail")}`);
+    await foot.eval(`document.querySelector('.scnbtn').click(); ${pick("catch")}`);
     assert.deepEqual((await foot.eval(RUN)).nums, ["1", "2", "3", "4–5"]);
     // the choice keeps keyboard focus; arrows move it like any radio group
-    assert.equal(await page.eval(`document.activeElement.getAttribute('aria-checked') + ':' + document.activeElement.textContent`), "true:on fail");
+    assert.equal(await page.eval(`document.activeElement.getAttribute('aria-checked') + ':' + document.activeElement.textContent`), "true:catch");
     await page.eval(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))`);
     assert.equal(await page.eval(`document.querySelector('.rs-facts').textContent`), "4 steps · 2 ask you · 1 repeat · reaches DONE");
     // closing the scenario restores the graph
@@ -787,7 +787,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
 
   test("Scenario address: #scenario=name=outcome opens that run; picks and closing keep the address in step", async (t) => {
     if (unavailable) return t.skip(unavailable);
-    // unknown names and outcomes are skipped; the step's on-fail is picked by the step's name
+    // unknown names and outcomes are skipped; the step's catch is picked by the step's name
     const page = await (await fresh()).open(url(render(tmp, SCENARIO, "scenario-link")) + "#scenario=mode=build,approve=nope,ghost=x,ship=fails");
     const state = `({ hash: location.hash, pressed: document.querySelector('.scnbtn').getAttribute('aria-pressed'), end: document.querySelector('.rs-facts') && document.querySelector('.rs-facts').textContent })`;
     assert.deepEqual(await page.eval(state), {hash: "#scenario=mode=build,ship=fails", pressed: "true", end: "5 steps · 1 asks you · stops on a failure"});
@@ -1654,7 +1654,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
 
   test("a data highlight: cards that name the data in prose, counts by role, steps through the hits, and dims nothing when no card has it", async (t) => {
     if (unavailable) return t.skip(unavailable);
-    const flow = 'skillflow 1.0\n\ncontext "x" {\n\tinput feature "The goal."\n\tinput unused "Never named."\n}\n\nstep plan by=llm "Restate the feature goal." {\n\toutput report "r"\n}\nstep build by=code "Build it." {\n\tinput report\n\ton-fail "Stop."\n}\nstep tell by=llm "Say how the Feature went."\n';
+    const flow = 'skillflow 1.0\n\ncontext "x" {\n\tinput feature "The goal."\n\tinput unused "Never named."\n}\n\nstep plan by=llm "Restate the feature goal." {\n\toutput report "r"\n}\nstep build by=code "Build it." {\n\tinput report\n\tcatch "Stop."\n}\nstep tell by=llm "Say how the Feature went."\n';
     const page = await (await fresh()).open(url(render(tmp, flow, "data-mentions")));
     await page.size(1280, 900);
     const got = await page.eval(`(() => { const name = (e) => e && e.querySelector('.nm') && e.querySelector('.nm').textContent;
@@ -1973,7 +1973,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
 
   test("generated layouts: every end is outside every frame and reached, with no geometry problem", async (t) => {
     if (unavailable) return t.skip(unavailable);
-    // seeded flows with phases, branches, gates, on-fail paths, and ends in every position the grammar allows
+    // seeded flows with phases, branches, gates, catch paths, and ends in every position the grammar allows
     let seed = 20261110, id = 0;
     const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32);
     const pick = (list) => list[Math.floor(random() * list.length)];
@@ -1989,7 +1989,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       if (kind === "step") {
         if (random() > 0.3) return `step ${name} by=llm\n`;
         const handler = (random() < 0.5 ? `step h${name} by=human\n` : "") + (random() < 0.6 ? end() : "");
-        return `step ${name} by=code {\n  on-fail "Recover." {\n${handler}  }\n}\n`;
+        return `step ${name} by=code {\n  catch "Recover." {\n${handler}  }\n}\n`;
       }
       const outcomes = kind === "gate" ? pick([["rejected"], ["approved", "rejected"], ["rejected", "later"]]) : pick([["yes"], ["a", "b"], ["a", "b", "c"], ["a", "b", "c", "d"]]);
       // an outcome with nothing in it carries prose: a bare `when` is an error
