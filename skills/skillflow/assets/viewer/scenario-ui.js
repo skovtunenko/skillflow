@@ -1,22 +1,100 @@
   // Owns the Scenario on screen: the run on the graph, the Scenario panel, the outcome pickers.
   // Writes state.scn, state.scnSeen and state.scnAt.
   var scnStep = null;  // the open Scenario panel's step move, for N and P in keys.js
+  // a pick that changes the run says so in a toast with Undo, and the edges that join the run flash once
   function pickOutcome(id, o) {
-    state.scn[id] = o;
-    var st = pbody.scrollTop, top = cur().kind === 'scenario';
+    var before = scenarioRun(), was = withPick();
+    if (before.forks[id] && before.forks[id].pick === o) return;
+    state.scn[id] = o; showScn(id);
+    var r = scenarioRun();
+    toast('Run changed: ' + before.cards + ' → ' + plural(r.cards, 'step') + ', ' + endWord(r), false, ['Undo', function () { state.scn = was; showScn(id); }]);
+  }
+  function showScn(id) {
+    var st = pbody.scrollTop, top = cur().kind === 'scenario', lit = Array.prototype.slice.call(svg.querySelectorAll('.e.on'));
     if (top) renderPanel(); paint();
+    Array.prototype.forEach.call(svg.querySelectorAll('.e.on'), function (p) {
+      if (lit.indexOf(p) >= 0) return;
+      p.classList.remove('flash'); void p.getBoundingClientRect(); p.classList.add('flash');  // a removed class and a reflow restart the animation
+    });
     var r = scenarioRun(); scnLive.textContent = plural(r.cards, 'step') + ', ' + r.asks + ' ' + (r.asks === 1 ? 'asks' : 'ask') + ' you, ' + r.endText;
     if (!top) return;
     pbody.scrollTop = st;
     var b = pbody.querySelector('[data-f="' + id + '"] [aria-checked=true]'); if (b) b.focus({ preventScroll: true });
   }
+  // a copy of the picks, with one more when id is given
+  function withPick(id, o) { var p = {}; Object.keys(state.scn).forEach(function (k) { p[k] = state.scn[k]; }); if (id) p[id] = o; return p; }
+  // the run that another outcome gives: '→ <next card> · <change>', the text under each choice
+  function outcomeNote(run, f, o) {
+    if (o.o === f.pick) return { to: nextOf(run, f.id), what: 'this run' };
+    if (o.revise) return { to: '', what: 'redo, then ask again' };
+    var alt = scenarioRun(withPick(f.id, o.o)), d = alt.cards - run.cards;
+    var what = alt.stop ? (alt.stop.kind === 'stop' ? 'stops on a failure' : 'ends early') : d ? (d > 0 ? '+' : '−') + plural(Math.abs(d), 'step') : 'same length';
+    if (alt.stop && d) what = (d > 0 ? '+' : '−') + Math.abs(d) + ', ' + what;
+    return { to: nextOf(alt, f.id), what: what, cls: alt.stop ? 'ends' : d > 0 ? 'more' : d < 0 ? 'less' : '' };
+  }
+  function nextOf(run, id) {
+    for (var i = 0; i < run.rows.length; i++) {
+      if (!run.rows[i].fork || run.rows[i].fork.id !== id) continue;
+      var x = run.rows.slice(i + 1).filter(function (y) { return y.t !== 'phase'; })[0];
+      return !x ? 'done' : x.t === 'end' ? x.kind === 'done' ? 'done' : 'end' : x.t === 'repeat' ? 'redo, ask again' : x.t === 'fail' ? 'catch' : title(x.n);
+    }
+    return '';
+  }
+  // the picks a run needs to pass a card: the outcome of each decision, gate and catch that holds it, outermost first; null when no branch holds it
+  function picksTo(id) {
+    function walk(list, need) {
+      for (var i = 0; i < list.length; i++) {
+        var n = list[i], got = null;
+        if (n.id === id) return need;
+        if (n.kind === 'phase') got = walk(n.children, need);
+        if (!got && n.catch) {
+          var c = need.concat([[n.catch.id, 'fails']]);
+          got = n.catch.id === id ? c : walk(n.catch.children, c);
+        }
+        (n.whens || []).forEach(function (w) { if (!got) got = walk(w.children, need.concat([[n.id, w.outcome]])); });
+        if (got) return got;
+      }
+      return null;
+    }
+    return walk(M.flow, []);
+  }
+  function runPasses(run, id) { return run.rows.some(function (x) { return x.n && x.n.id === id && x.t !== 'phase'; }); }
+  // in Scenario, a card off the run offers to route the run through it: the picks that lead there, on top of the reader's picks,
+  // else on top of the defaults when another pick of the reader ends the run before the card
+  function scnRoute(n) {
+    if (!scenarioOn() || n.kind === 'phase') return null;
+    var run = scenarioRun(), row = run.rows.filter(function (x) { return x.n && x.n.id === n.id && x.t !== 'phase'; })[0];
+    if (row) return el('p', 'scroute on', row.num ? 'Step ' + row.num + ' of this run.' : 'On this run.');
+    var need = picksTo(n.id) || [], tries = [withPick(), {}].map(function (p) { need.forEach(function (x) { p[x[0]] = x[1]; }); return p; });
+    var picks = tries.filter(function (p) { return runPasses(scenarioRun(p), n.id); })[0];
+    if (!picks) return el('p', 'scroute', 'No run of this flow passes this card.');
+    // the answers that change, in run order: the ones the card needs, and the reader's picks that go back to the defaults
+    var to = scenarioRun(picks), needs = {};
+    need.forEach(function (x) { needs[x[0]] = 1; });
+    var list = to.rows.filter(function (x) { var f = x.fork; return f && (run.forks[f.id] ? run.forks[f.id].pick !== f.pick : needs[f.id]); }).map(function (x) {
+      return title(x.n) + ' → ' + (x.fork.pick === 'fails' ? 'catch' : x.fork.pick);
+    });
+    return add(el('div', 'scroute off'), el('p', null, 'This run skips this card.' + (list.length ? ' It takes: ' + list.join(', ') + '.' : '')),
+      button('btn primary', [glyph('route'), 'Run through this card'], function () {
+        var was = withPick(), before = run.cards;
+        state.scn = picks; showScn(); renderPanel();
+        var r = scenarioRun();
+        toast('Run changed: ' + before + ' → ' + plural(r.cards, 'step') + ', ' + endWord(r), false, ['Undo', function () { state.scn = was; showScn(); renderPanel(); }]);
+      }));
+  }
+  function endWord(r) { var kind = r.stop ? r.stop.kind : 'done'; return kind === 'done' ? 'reaches DONE' : kind === 'stop' ? 'stops on a failure' : 'ends early'; }
+  function factsOf(r) {
+    return [plural(r.cards, 'step') + ' · ' + r.asks + ' ' + (r.asks === 1 ? 'asks' : 'ask') + ' you · ' + (r.repeats ? plural(r.repeats, 'repeat') + ' · ' : ''),
+      el('span', r.stop ? r.stop.kind : 'done', endWord(r))];
+  }
   function onRun(run, a) { return !a || a.split(' ').every(function (k) { return run.taken[k]; }); }
+  function edgeOn(run, p) {
+    var to = p.getAttribute('data-to'), after = p.getAttribute('data-after');
+    return onRun(run, p.getAttribute('data-c')) && (!to || !!run.vis[visibleId(to)]) && (!after || !!run.passed[after]);
+  }
   function paintRun(run) {
     svg.classList.toggle('scn', !!run);
-    Array.prototype.forEach.call(svg.querySelectorAll('.e,.ah'), function (p) {
-      var to = p.getAttribute('data-to'), after = p.getAttribute('data-after');
-      p.classList.toggle('on', !!run && onRun(run, p.getAttribute('data-c')) && (!to || !!run.vis[visibleId(to)]) && (!after || !!run.passed[after]));
-    });
+    Array.prototype.forEach.call(svg.querySelectorAll('.e,.ah'), function (p) { p.classList.toggle('on', !!run && edgeOn(run, p)); });
     labelEls.forEach(function (l) {
       var c = l.el.dataset.c, k = l.el.dataset.k, f = run && k ? run.forks[k] : null;
       l.el.classList.toggle('pick', !!run && !!c && onRun(run, c) && (!f || f.pick === l.el.dataset.o || l.el.dataset.o === 'approved' && f.pick === 'revise'));
@@ -46,14 +124,14 @@
       var s = button('rs-seg ' + (fail ? 'fail' : 'by-' + (EXEC[by] ? by : 'x')) + (stop ? ' stop' : ''), null, function () { setAt(i, true); }, name);
       s.title = name; strip.appendChild(s); return s;
     });
-    var kind = run.stop ? run.stop.kind : 'done';
-    var facts = add(el('span', 'rs-facts'), plural(run.cards, 'step') + ' · ' + run.asks + ' ' + (run.asks === 1 ? 'asks' : 'ask') + ' you · ' + (run.repeats ? plural(run.repeats, 'repeat') + ' · ' : ''),
-      el('span', kind, kind === 'done' ? 'reaches DONE' : kind === 'stop' ? 'stops on a failure' : 'ends early'));
+    var facts = add.apply(null, [el('span', 'rs-facts')].concat(factsOf(run)));
     var posEl = el('span', 'rs-pos'); posEl.setAttribute('aria-live', 'polite');
     var stepper = add(el('span', 'rs-step'), tipped(button('icon-btn', glyph('back'), function () { setAt(atIx - 1, true); }, 'Previous step (P)'), 'Previous step (P)'), posEl,
       tipped(button('icon-btn', glyph('right'), function () { setAt(atIx + 1, true); }, 'Next step (N)'), 'Next step (N)'));
-    var reset = Object.keys(state.scn).length ? button('btn ghost screset', 'Reset', function () { state.scn = {}; renderPanel(true); paint(); }, 'Go back to the default answers') : null;
-    var sum = add(el('div', 'scsum'), add(el('div', 'rs-top'), N ? strip : null, reset), add(el('div', 'rs-line'), facts, N ? stepper : null));
+    // always in place, so the strip keeps its width when the first pick changes the run; off while the answers are the defaults
+    var reset = button('btn ghost screset', 'Reset answers', function () { state.scn = {}; renderPanel(true); paint(); }, 'Go back to the default answers');
+    reset.disabled = !Object.keys(state.scn).length;
+    var sum = add(el('div', 'scsum'), add(el('div', 'rs-top'), N ? strip : null, Object.keys(run.forks).length ? reset : null), add(el('div', 'rs-line'), facts, N ? stepper : null));
     // the run in groups, one per Route stop and numbered as on the Route; a flow of one stop stays one list
     var grouped = stations.length > 1, groups = [];
     run.rows.forEach(function (x) {
@@ -100,7 +178,7 @@
         li = add(el('li', 'sc-row' + (ask ? ' ask' : '') + (fail ? ' sc-fail' : '') + ' by-' + (n.kind === 'gate' ? 'human' : EXEC[n.by] ? n.by : 'x')),
           button('sc-go', [el('span', 'sc-n', String(x.num)), main], function () { mark(li); reveal(n.id); },
             x.num + '. ' + (fail ? 'Catch of ' + title(byId[n.step]) : title(n)) + '. Show in the graph'));
-        if (x.fork) li.appendChild(forkControl(x.fork, n));
+        if (x.fork) li.appendChild(forkControl(x.fork, n, run));
         stepLis.push(li);
       }
       rowLis.push(li); rowIx.push(Math.max(0, stepLis.length - 1));
@@ -130,17 +208,18 @@
     return [sum, list];
   }
   function revealEnd() { var p = pos.__end; if (p) centerOn(p.x + p.w / 2, p.y + p.h / 2, true); }
-  // one radio group per branch point: arrows move the choice, as in any radio group
-  function forkControl(f, n) {
+  // one radio group per branch point: arrows move the choice, as in any radio group.
+  // A decision or a gate says above its choices that a pick changes the run; each choice says where it leads and what it changes
+  function forkControl(f, n, run) {
     var wrap = el('div', 'sc-fork' + (n.kind === 'step' ? ' quiet' : '')); wrap.dataset.f = f.id;
-    // the buttons read as choices on their own; the group name stays for screen readers
     var seg = el('div', 'seg'); seg.setAttribute('role', 'radiogroup');
     seg.setAttribute('aria-label', (n.kind === 'step' ? 'Result' : n.kind === 'gate' ? 'Your answer' : 'Outcome') + ': ' + (n.kind === 'step' ? title(n) : firstLine(n.question || n.prose) || title(n)));
     var opts = f.opts.map(function (o, i) {
-      var b = button('opt' + (o.ends ? ' ends' : '') + (o.revise ? ' rev' : ''), [o.revise ? glyph('loop') : null, el('span', null, o.o === 'fails' ? 'catch' : o.o), o.ends ? glyph('end', 'og') : null], function () { pickOutcome(f.id, o.o); });
-      b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(o.o === f.pick)); b.tabIndex = o.o === f.pick ? 0 : -1;
-      if (o.ends) { b.dataset.tip = 'This answer ends the flow'; b.setAttribute('aria-label', o.o + ', ends the flow'); }
-      if (o.revise) { b.dataset.tip = 'Ask for changes: the work is redone and the gate asks again'; b.setAttribute('aria-label', 'revise, redo the work and ask again'); }
+      var note = outcomeNote(run, f, o);
+      var b = button('opt' + (o.ends ? ' ends' : '') + (o.revise ? ' rev' : ''), [add(el('span', 'on'), o.revise ? glyph('loop') : null, o.o === 'fails' ? 'catch' : o.o),
+        el('span', 'oc' + (note.cls ? ' ' + note.cls : ''), (note.to && note.to !== (o.o === 'fails' ? 'catch' : o.o) ? '→ ' + note.to + ' · ' : '') + note.what)], function () { pickOutcome(f.id, o.o); });
+      b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(o.o === f.pick)); b.tabIndex = o.o === f.pick ? 0 : -1; b.dataset.o = o.o;
+      if (o.revise) b.dataset.tip = 'Ask for changes: the work is redone and the gate asks again';
       b.addEventListener('keydown', function (e) {
         var d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
         if (!d) return;
@@ -149,6 +228,6 @@
       return b;
     });
     add.apply(null, [seg].concat(opts));
-    return add(wrap, seg);
+    return add(wrap, n.kind === 'step' ? null : add(el('div', 'sc-fcap'), glyph(n.kind), n.kind === 'gate' ? 'Pick an answer to change the run' : 'Pick an outcome to change the run'), seg);
   }
 

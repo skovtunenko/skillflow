@@ -103,14 +103,14 @@ test("differingLines gives the whole lines that differ, and the rest rebuilds th
 });
 
 test("the layout choices survive their own cookie; with none, the page starts as an editor", () => {
-  const start = {view: "source", split: "cols", ratio: 55, srcMode: "edit", panelShut: true, dir: "cols"};
+  const start = {view: "source", split: "cols", ratio: 55, srcMode: "edit", panelShut: true, dir: "cols", order: "gs"};
   assert.deepEqual(readPrefs(""), start);
   assert.deepEqual(readPrefs(null, true), {...start, split: ""}, "a narrow window starts with the text alone");
-  const prefs = {view: "graph", split: "rows", ratio: 61, srcMode: "read", panelShut: false, dir: "rows"};
-  assert.equal(prefsPair(prefs), "skillflow-editor=graph.rows.61.read.open.rows");
+  const prefs = {view: "graph", split: "rows", ratio: 61, srcMode: "read", panelShut: false, dir: "rows", order: "sg"};
+  assert.equal(prefsPair(prefs), "skillflow-editor=graph.rows.61.read.open.rows.sg");
   assert.deepEqual(readPrefs(`other=1; ${prefsPair(prefs)}; more=2`), prefs);
   assert.deepEqual(readPrefs(prefsPair({...prefs, split: ""})), {...prefs, split: ""}, "one view at a time; the way the split was turned is kept");
-  assert.deepEqual(readPrefs("skillflow-editor=graph.one.61.read.open"), {...prefs, split: "", dir: "cols"}, "a pair of the version before has no turn");
+  assert.deepEqual(readPrefs("skillflow-editor=graph.one.61.read.open"), {...prefs, split: "", dir: "cols", order: "gs"}, "a pair of the version before has no turn and no order");
   // a pair of the first editor, or a pair with a part this version does not know, counts as nothing saved
   for (const old of ["skillflow-editor=%7B%22mode%22%3A%22both%22%7D", "skillflow-editor=help.cols.55.edit.shut", "skillflow-editor=graph.wide.55.edit.shut", "skillflow-editor=graph.cols.55.write.shut"]) assert.deepEqual(readPrefs(old), start, old);
   assert.deepEqual(readPrefs("skillflow-editor=source.cols.999.edit.x"), {...start, ratio: 80});

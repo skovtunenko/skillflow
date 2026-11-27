@@ -55,7 +55,7 @@
     collapse: 'M4 3l4 4 4-4M4 13l4-4 4 4', expand: 'M4 7l4-4 4 4M4 9l4 4 4-4',
     fold: 'M5 2l3 3 3-3M5 14l3-3 3 3', keys: 'M1.5 4.5h13v7h-13zM4 7h.5M6.5 7h.5M9 7h.5M11.5 7h.5M5 9.5h6', prose: 'M2.5 4h11M2.5 8h11M2.5 12h6', unfold: 'M5 5l3-3 3 3M5 11l3 3 3-3', copy: 'M5.5 5.5h8v8h-8zM2.5 10.5v-8h8',
     comment: 'M2.5 3h11v7.5H7.5L4.5 13v-2.5h-2z',
-    cols: 'M2.5 3h11v10h-11zM8 3v10', rows: 'M2.5 3h11v10h-11zM2.5 8h11', side: 'M2.5 3h11v10h-11zM10 3v10',
+    cols: 'M2.5 3h11v10h-11zM8 3v10', swap: 'M3 5.5h10l-2.5-2.5M13 10.5H3l2.5 2.5', rotate: 'M13 8a5 5 0 1 1-1.5-3.5M13 2.5v2.5h-2.5', rows: 'M2.5 3h11v10h-11zM2.5 8h11', side: 'M2.5 3h11v10h-11zM10 3v10',
     eye: 'M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8s-2.4 4.5-6.5 4.5S1.5 8 1.5 8zM8 9.8a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z',
     route: 'M4 14a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 4 14zM12 5.2A1.6 1.6 0 1 0 12 2a1.6 1.6 0 0 0 0 3.2zM5.6 12.4h4.9a2.1 2.1 0 0 0 0-4.2h-5a2.1 2.1 0 0 1 0-4.2h4.9',
     save: 'M3 2.5h8.2l2.3 2.3v8.7H3zM5.2 2.5v3h4.6v-3M5.2 13.5V9.3h5.6v4.2',
@@ -117,14 +117,28 @@
   state.level = maxDepth;
   // the reader's choices live on when the page draws a changed flow: the fold level counts from the deepest one, which may change
   if (carry) { state.level = Math.max(0, maxDepth - carry.levelDown); state.hidden = carry.hidden; state.failPaths = carry.failPaths; }
-  // An edit page shows Graph and Source side by side (split: 'cols') or one above the other ('rows'); dir is the way the split was
-  // last turned, kept while one view is alone. Its Source view has two modes: 'read', with comments, and 'edit'.
-  // The choices come from the viewer before this one, else from the editor's memory.
-  var prefs = carry || (host && host.start) || {};
-  state.split = host && prefs.split ? prefs.split : ''; state.dir = state.split || prefs.dir || 'cols';
+  // The page shows Graph and Source side by side (split: 'cols') or one above the other ('rows'); dir is the way the split was
+  // last turned, kept while one view is alone; order 'sg' puts Source first, and ratio is the first view's share. An edit page's
+  // Source view has two modes: 'read', with comments, and 'edit'. The choices come from the viewer before this one, else from
+  // the editor's memory, else, on a rendered page, from this browser: a convenience that a blocked storage only drops.
+  var LAYOUT_KEY = 'skillflow-layout';
+  // the stored value is untrusted: the page keeps only the values it knows, and a number for the ratio
+  function storedLayout() {
+    var p = null;
+    try { p = JSON.parse(window.localStorage.getItem(LAYOUT_KEY)); } catch (e) { /* blocked or not JSON: the defaults */ }
+    if (!p || typeof p !== 'object') return null;
+    return { view: p.view === 'source' ? 'source' : 'graph', split: p.split, dir: p.dir, order: p.order, ratio: typeof p.ratio === 'number' ? p.ratio : 55 };
+  }
+  var prefs = carry || (host ? host.start : storedLayout()) || {};
+  state.split = prefs.split === 'cols' || prefs.split === 'rows' ? prefs.split : ''; state.dir = state.split || (prefs.dir === 'rows' ? 'rows' : 'cols');
+  state.order = prefs.order === 'sg' ? 'sg' : 'gs';
   // ratio 55: by default the graph gets a little more than half the room, as its cards and lanes need more width than lines of text; editor/layout.mjs has the same default
-  state.ratio = prefs.ratio || 55; state.srcMode = host ? prefs.srcMode || 'edit' : 'read';
-  function keepPrefs() { if (host) host.remember({ view: state.view, split: state.split, dir: state.dir, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut }); }
+  // not rounded: a redraw or a reload keeps the divider where a drag left it
+  state.ratio = Math.max(20, Math.min(80, Number(prefs.ratio) || 55)); state.srcMode = host ? prefs.srcMode || 'edit' : 'read';
+  function keepPrefs() {
+    if (host) return host.remember({ view: state.view, split: state.split, dir: state.dir, order: state.order, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut });
+    try { window.localStorage.setItem(LAYOUT_KEY, JSON.stringify({ view: state.view === 'source' ? 'source' : 'graph', split: state.split, dir: state.dir, order: state.order, ratio: state.ratio })); } catch (e) { /* kept for this visit only */ }
+  }
   // a per-unit toggle wins over the stepwise level: open while its depth is within the level
   function isCollapsed(u) { var o = state.override[u.id]; return u._open ? false : o != null ? o : u._depth > state.level; }
   // a catch with no cards of its own, or with one end only, is a footnote of its step unless the reader shows failure paths

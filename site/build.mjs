@@ -273,8 +273,10 @@ const notices = '<figure class="lic" aria-label="Licenses">\n' + parts.map((p) =
 
 // 3. fill the page and check it
 const template = read(join(SITE, "index.html"));
+// the brand mark of the header on the light-theme accent; inline, so each of the three pages carries it without a file
+const FAVICON = `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="4" fill="#3b5bdb"/><path d="M3 2.5h4v3H3zM9 10.5h4v3H9zM5 5.5V8h6v2.5" transform="translate(2 2) scale(.75)" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>')}">`;
 
-const fills = {"version": escapeHtml(version), "viewer-css": viewerCss, "license-notices": notices, "tutorial-rail": tutorial.rail, "tutorial-panels": tutorial.panels,"steps": String(steps.length), "help-chapters": helpLinks, "lint-release-notes": escapeHtml(lint["release-notes.kdl"] ?? fail("examples/release-notes.kdl is missing"))};
+const fills = {"favicon": FAVICON, "version": escapeHtml(version),"viewer-css": viewerCss, "license-notices": notices, "tutorial-rail": tutorial.rail, "tutorial-panels": tutorial.panels,"steps": String(steps.length), "help-chapters": helpLinks, "lint-release-notes": escapeHtml(lint["release-notes.kdl"] ?? fail("examples/release-notes.kdl is missing"))};
 // `pair` variants pair code lines with graph nodes; use them only inside the <figure data-pair> of one example
 const page = template.replace(/<!--(flow|flow-body|flow-pair|graph|graph-pair):([\w-]+)-->/g, (_, kind, name) =>
   kind.startsWith("graph") ? graphHtml(name, kind === "graph-pair") : flowHtml(name, kind === "flow-body", kind === "flow-pair"))
@@ -301,6 +303,9 @@ for (const [dir, argv] of [["flow", ["render", flow, "-o"]], ["play", ["edit", f
   mkdirSync(join(out, dir), {recursive: true});
   const result = run(...argv, join(out, dir, "index.html"));
   if (result.status !== 0) fail(`${argv[0]} of ${flow} failed:\n${result.stdout}${result.stderr}`);
+  const file = join(out, dir, "index.html"), html = read(file);
+  if (!/<meta charset="utf-8">/i.test(html)) fail(`${file} has no <meta charset="utf-8"> to put the favicon after`);
+  writeFileSync(file, html.replace(/<meta charset="utf-8">/i, (m) => m + FAVICON));
 }
 console.log(`examples: ${examples.length} valid · tutorial steps: ${steps.length} valid · words per section: ${counts.join(", ")}`);
 console.log(`wrote ${join(out, "index.html")}, ${join(out, "flow", "index.html")}, ${join(out, "play", "index.html")} (SkillFlow ${version})`);

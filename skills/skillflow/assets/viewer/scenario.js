@@ -10,13 +10,14 @@
     return n.kind === 'gate' ? imp.concat(wr) : wr.concat(imp);
   }
   // the default is the first outcome that goes on: a reader starts from the run that reaches the end of the flow
-  function chosen(id, opts) {
-    var c = state.scn[id];
+  function chosen(id, opts, scn) {
+    var c = (scn || state.scn)[id];
     if (opts.some(function (o) { return o.o === c; })) return c;
     return (opts.filter(function (o) { return !o.ends && !o.revise; })[0] || opts[0]).o;
   }
+  // scn: the picks to walk, state.scn when left out (a preview walks other picks)
   // rows: {t: 'phase' | 'card' | 'fail' | 'repeat' | 'end', n, num, fork: {id, opts, pick}}; taken and passed drive the graph edges
-  function scenarioRun() {
+  function scenarioRun(scn) {
     var r = { rows: [], taken: {}, passed: {}, forks: {}, vis: {}, phases: {}, cards: 0, asks: 0, repeats: 0, by: {}, stop: null }, num = 0;
     function card(n, t) {
       var row = { t: t || 'card', n: n, num: ++num };
@@ -27,7 +28,7 @@
       return row;
     }
     function branch(row, id, n) {
-      var opts = outcomesOf(n), pick = chosen(id, opts);
+      var opts = outcomesOf(n), pick = chosen(id, opts, scn);
       row.fork = { id: id, opts: opts, pick: pick }; r.forks[id] = row.fork;
       r.taken[id + '=' + pick] = true;
       return opts.filter(function (o) { return o.o === pick; })[0];
