@@ -266,7 +266,7 @@
     units.forEach(function (u) { if (state.override[u.id] != null) override[unitKey(u)] = state.override[u.id]; });
     return { scale: viewport.clientWidth ? state.scale : 0, left: viewport.scrollLeft, top: viewport.scrollTop, moved: state.moved, levelDown: maxDepth - state.level, override: override, hidden: state.hidden,
       failPaths: state.failPaths, selected: selected, sheet: panel.classList.contains('open'),
-      asked: asked, view: state.view, split: state.split, dir: state.dir, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut,
+      asked: asked, view: state.view, split: state.split, dir: state.dir, order: state.order, ratio: state.ratio, srcMode: state.srcMode, panelShut: !!state.panelShut,
       comments: comments, rev: rev, updatedAt: updatedAt, savedRev: savedRev, savedAt: savedAt, extra: extra, copyId: copyId, fileVersion: fileVersion, saveHandle: saveHandle, pendingSave: pendingSave, autosaving: autosaving, downloaded: downloaded,
       draft: footDraft() || carriedDraft };
   }

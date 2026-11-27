@@ -76,11 +76,9 @@ view has two modes.
   The page opens in `Edit`. In `Read`, a note says when the text is not
   saved, or when the editor's text has errors and the view shows the last
   valid text; a press on the note goes to the editor.
-- **One switch.** The header has four tabs: Graph, Split, Source, Help. One
-  tab is on. Split shows Graph and Source together, with a divider that
-  moves. A second press on Split turns it: side by side, or Graph above
-  Source. The browser remembers the choice and the turn. On a phone, the two
-  views are one above the other.
+- **Layout.** The header has the tabs Graph, Source, and Help, and the
+  **Layout** button, as on a rendered page. The page opens with Graph beside
+  Source. The browser remembers the layout for the next editor.
 - **Live check.** The page runs SkillFlow's own validator, renderer, and
   formatter on each change, and draws each valid text in place: the zoom,
   the selected card, and the comments stay. Each problem shows at its line
@@ -204,11 +202,24 @@ comments. The stop in view is filled. A click on a stop moves the graph to
 it, lights its cards, and lists its cards, data, ends, and rules. The page
 builds the route from the flow file alone. When stops are past an edge, an
 arrow at that edge moves the line.
+**Layout**, the button beside the Graph, Source, and Help tabs, shows a picture
+of the layout and opens a picker: Graph, Source, or both, side by side or one
+above the other, in either order. A tab shows its view alone. With both views
+in view, a drag moves the divider with the pointer; the arrow keys, Home, and
+End move it too, and a double click gives the first sizes back. Its two buttons
+show while the pointer is on the divider or the divider has focus; they swap the
+views (⇅) and turn the split (↻). Only a click acts. On a phone the picker is a sheet at the bottom,
+and the two views are one above the other. The browser remembers the layout.
 **Scenario**, first in the graph toolbar and at the top of the overview,
 shows one run of the flow as a numbered list, grouped by Route stop under the
 stop number and name. Each decision, gate, and step
 with a `catch` on the run offers its outcomes; the default is the first
-outcome that goes on. Above the list, a strip shows each step of the run as
+outcome that goes on. Each outcome names the next card of its run and says
+how the run changes, for example `−2, ends early`. Only a click
+acts: a pick says the new count in a toast with Undo, and **Reset answers**
+goes back to the default answers. A click on a card off the run opens its
+panel, which names the answers that lead to the card; **Run through this
+card** picks them. Above the list, a strip shows each step of the run as
 one segment coloured by who acts, with a gap between Route stops; one line
 counts the steps, the times the skill asks the user, and the repeats from
 `revise`, and says where the run ends. The arrows beside it, a segment, or the

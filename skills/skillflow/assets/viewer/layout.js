@@ -202,15 +202,31 @@
     else { out.h = yTop + laneH; out.exit = false; }
     return out;
   }
-  function laneBlock(w, key) { return tagLane(w._depth && isCollapsed(w) ? leaf(w, FOLD_W, w.ends) : series(w.children.map(layoutNode)), key); }
-  function layoutNode(n) {
+  function laneBlock(w, key, free) { return tagLane(w._depth && isCollapsed(w) ? leaf(w, FOLD_W, w.ends) : series(w.children.map(function (k) { return layoutNode(k, free); })), key); }
+  // free: inside a phase, the sides of a block that no other lane stands beside, {l, r}; null outside every phase. An end
+  // card leaves the phase frame at a side, so a lane that ends moves only when lanes that go on stand between it and every
+  // free side: then it moves to a free side, the right one first, and its arrow crosses no lane that goes on. Every other
+  // lane keeps the author's order.
+  function endsOut(lanes, free) {
+    if (!free) return lanes;
+    var go = lanes.filter(function (l) { return !l.ends; });
+    if (!go.length || go.length === lanes.length) return lanes;
+    var first = lanes.indexOf(go[0]), last = lanes.indexOf(go[go.length - 1]);
+    var before = lanes.slice(0, first), after = lanes.slice(last + 1), mid = lanes.slice(first, last + 1).filter(function (l) { return l.ends; });
+    if (free.l && free.r) return before.concat(go, mid, after);
+    if (free.r) return go.concat(before, mid, after);
+    if (free.l) return before.concat(mid, after, go);
+    return lanes;
+  }
+  function sideOf(free, i, count) { return free && { l: free.l && i === 0, r: free.r && i === count - 1 }; }
+  function layoutNode(n, free) {
     if (n.kind === 'end') return leaf(n, END_W, true);
     if (n.kind === 'phase') {
       if (isCollapsed(n)) return leaf(n, PHASE_W, n.ends);
       // an end is drawn outside the phase frame: the trailing one below it, the others beside it
       var kids = n.children, tail = kids.length && kids[kids.length - 1].kind === 'end' ? kids[kids.length - 1] : null;
       if (tail) kids = kids.slice(0, -1);
-      var inner = series(kids.map(layoutNode)), out = blank(), hw = measureHead(n);
+      var inner = series(kids.map(function (k) { return layoutNode(k, free || { l: true, r: true }); })), out = blank(), hw = measureHead(n);
       var w = Math.max(inner.w + 2 * PAD, PHASE_W + 2 * PAD, hw + 16), ix = (w - inner.w) / 2;
       out.w = w; out.ax = inner.nodes.length ? ix + inner.ax : w / 2;
       out.h = INNER_TOP + inner.h + PAD + (inner.exit ? 8 : 0);
@@ -229,22 +245,23 @@
     if (n.kind === 'gate' || n.kind === 'decide') {
       // an implied outcome that continues (a gate's approved, a one-when decide's other outcome) is a dotted bypass lane
       var bypass = (n.implied || []).filter(function (o) { return o.outcome !== 'revise'; }).map(function (o) { return { label: o.outcome, kind: 'implied', key: n.id + '=' + o.outcome, block: blank() }; });
-      var written = n.whens.map(function (w) { return { label: w.outcome, kind: 'branch', key: n.id + '=' + w.outcome, block: laneBlock(w, n.id + '=' + w.outcome) }; });
+      var written = n.whens.map(function (w) { return { label: w.outcome, kind: 'branch', key: n.id + '=' + w.outcome, when: w, ends: !!w.ends }; });
+      var lanes = endsOut(n.kind === 'gate' ? bypass.concat(written) : written.concat(bypass), free);
+      lanes.forEach(function (l, i) { if (l.when) l.block = laneBlock(l.when, l.key, sideOf(free, i, lanes.length)); });
       // outcomes that hold no card and go on share one lane, straight under the head (spec: Shared line for empty outcomes)
-      var empty = written.filter(function (l) { return !l.block.nodes.length && l.block.exit; });
+      var empty = lanes.filter(function (l) { return l.when && !l.block.nodes.length && l.block.exit; });
       if (empty.length > 1) {
-        var at = written.indexOf(empty[0]);
-        written = written.filter(function (l) { return empty.indexOf(l) < 0; });
-        written.splice(at, 0, { shared: empty, kind: 'branch', block: blank() });
+        var at = lanes.indexOf(empty[0]);
+        lanes = lanes.filter(function (l) { return empty.indexOf(l) < 0; });
+        lanes.splice(at, 0, { shared: empty, kind: 'branch', block: blank() });
       }
-      var lanes = n.kind === 'gate' ? bypass.concat(written) : written.concat(bypass);
       var shared = lanes.map(function (l) { return !!l.shared; }).indexOf(true);
       var g = lanes.length ? fork(head, lanes, shared < 0 ? null : shared) : head;
       if ((n.implied || []).some(function (o) { return o.outcome === 'revise'; })) g.loop = { x: g.headX || 0, y: head.h / 2, h: head.h, key: n.id + '=revise' };
       return g;
     }
     if (n.kind === 'step' && n.catch && !footnoted(n.catch)) {
-      var f = n.catch, failBlock = tagLane(series([leaf(f, FAIL_W, false)].concat(f.children.map(layoutNode))), f.id + '=fails');
+      var f = n.catch, failBlock = tagLane(series([leaf(f, FAIL_W, false)].concat(f.children.map(function (k) { return layoutNode(k, free && { l: false, r: free.r }); }))), f.id + '=fails');
       return fork(head, [{ label: 'ok', kind: 'main', key: f.id + '=ok', block: blank() }, { label: 'catch', kind: 'fail', key: f.id + '=fails', block: failBlock }], 0);
     }
     return head;

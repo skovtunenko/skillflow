@@ -16,7 +16,7 @@
     canvas.textContent = ''; els = {}; groupEls = {}; pos = {}; labelEls = [];
     canvas.dataset.lod = 'full';  // cards are measured with their prose; applyZoom sets the main canvas level after layout
     var inputs = interactive ? M.context.inputs.map(function (x) { return x.name; }).filter(Boolean) : [];
-    var blocks = [leaf({ id: startId, kind: 'start', inputs: inputs }, inputs.length ? NODE_W : 96, false)].concat(flow.map(layoutNode));
+    var blocks = [leaf({ id: startId, kind: 'start', inputs: inputs }, inputs.length ? NODE_W : 96, false)].concat(flow.map(function (n) { return layoutNode(n); }));
     if (blocks[blocks.length - 1].exit) {
       var outputs = interactive ? M.context.outputs.filter(function (o) { return o.name && M.data[o.name]; }).map(function (o) { return o.name; }) : [];
       blocks.push(leaf({ id: startId.replace('start', 'end'), kind: 'done', outputs: outputs }, outputs.length ? NODE_W : 132, true));

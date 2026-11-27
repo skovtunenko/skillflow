@@ -310,13 +310,141 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     assert.deepEqual(links, ["phase -> p", "p -> p", "step -> a", "a -> a", "step -> b", "b -> b", "step -> c", "c -> c"]);
   });
 
+  test("a rendered page: the divider follows the pointer pixel by pixel, restyles only itself, and keys and a double click set it", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "divider")));
+    await page.size(1400, 900);
+    await page.eval(PICK("Graph | Source"));
+    const KEY = (key) => `(document.querySelector('.vdivide').dispatchEvent(new KeyboardEvent('keydown', {key: '${key}', bubbles: true, cancelable: true})), true)`;
+    const RATIO = "['main', '.dtools', '#v-graph'].map((s) => getComputedStyle(document.querySelector(s)).getPropertyValue('--ratio')).concat(document.querySelector('.vdivide').getAttribute('aria-valuenow'))";
+    // the divider's buttons: out of sight at rest, so they do not cover the next view; in sight with the keyboard focus on the divider or the pointer on it
+    const TOOLS = "getComputedStyle(document.querySelector('.dtools')).visibility";
+    assert.equal(await page.eval(TOOLS), "hidden");
+    await page.eval("(document.querySelector('.vdivide').focus(), true)");
+    assert.equal(await page.eval(TOOLS), "visible");
+    await page.eval("(document.querySelector('.vdivide').blur(), true)");
+    await page.until(`${TOOLS} === 'hidden'`);
+    const [hx, hy] = await page.eval("(() => { const r = document.querySelector('.vdivide').getBoundingClientRect(); return [r.left + r.width / 2, r.top + 100]; })()");
+    await page.mouse("mouseMoved", hx, hy);
+    await page.until(`${TOOLS} === 'visible'`);
+    await page.mouse("mouseMoved", hx - 300, hy);
+    await page.until(`${TOOLS} === 'hidden'`);
+    await page.eval(KEY("ArrowRight"));
+    // a new ratio restyles main and the divider's buttons; the views keep the initial value, so a drag does not restyle every card and line
+    assert.deepEqual(await page.eval(RATIO), ["59%", "59%", "55%", "59"]);
+    // a drag that takes the divider 3 px off its middle: the divider does not jump to the pointer, and each pixel of the pointer moves it one pixel
+    const LEFT = "document.querySelector('.vdivide').getBoundingClientRect().left";
+    const start = await page.eval(LEFT), y = 300;
+    await page.mouse("mousePressed", start + 1, y);
+    // a drag holds the divider: its buttons step out of the way at once
+    assert.deepEqual(await page.eval(`[document.querySelector('main').classList.contains('dragging'), ${TOOLS}]`), [true, "hidden"]);
+    const lefts = [];
+    for (let dx = 1; dx <= 30; dx++) { await page.mouse("mouseMoved", start + 1 + dx, y); lefts.push(await page.eval(LEFT)); }
+    await page.mouse("mouseReleased", start + 31, y);
+    assert.ok(lefts.every((left, i) => Math.abs(left - (start + i + 1)) < 0.05), `the divider moves with the pointer: ${lefts.slice(0, 5)}`);
+    assert.deepEqual(await page.eval(`[document.querySelector('main').classList.contains('dragging'), document.querySelector('.vdivide').getAttribute('aria-valuenow'), JSON.parse(localStorage.getItem('skillflow-layout')).ratio > 61]`), [false, "61", true]);
+    // a reload keeps the divider where the drag left it, to a fraction of a pixel
+    const dropped = await page.eval(LEFT);
+    await page.reload();
+    assert.ok(Math.abs(await page.eval(LEFT) - dropped) < 0.05, "a reload keeps the fraction");
+    // the window changes size under a drag: the divider stays under the pointer, and a window that turns the split follows the other axis
+    const MIDDLE = "(() => { const r = document.querySelector('.vdivide').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()";
+    const [mx] = await page.eval(MIDDLE);
+    await page.mouse("mousePressed", mx, y);
+    // the move comes right after the new size, before the browser says it with a resize event
+    await page.resize(1000, 900);
+    await page.mouse("mouseMoved", 500, y);
+    assert.ok(Math.abs((await page.eval(MIDDLE))[0] - 500) < 1, "the divider is under the pointer in the narrower window");
+    await page.resize(700, 900);
+    await page.mouse("mouseMoved", 350, 400);
+    assert.ok(Math.abs((await page.eval(MIDDLE))[1] - 400) < 1, "one above the other: the divider follows the pointer up and down");
+    await page.mouse("mouseReleased", 350, 400);
+    await page.resize(1400, 900);
+    // the turn button under a drag (a keyboard reaches it while the mouse holds the divider): the drag goes on along the new axis
+    const TURN = "(document.querySelector('.dtools .dturn').click(), true)";
+    const [tx, ty] = await page.eval(MIDDLE);
+    await page.mouse("mousePressed", tx, ty);
+    await page.eval(TURN);
+    await page.mouse("mouseMoved", tx, 400);
+    assert.deepEqual([await page.eval("document.querySelector('main').dataset.split"), Math.abs((await page.eval(MIDDLE))[1] - 400) < 1], ["rows", true]);
+    await page.mouse("mouseReleased", tx, 400);
+    await page.eval(TURN);
+    // a drag that the browser cancels ends: the pointer moves on, the divider stays
+    const held = await page.eval(LEFT);
+    await page.mouse("mousePressed", held + 4, y);
+    await page.mouse("mouseMoved", held + 4, y);  // the capture takes effect with the next pointer event; only then can the browser take it away
+    await page.eval("(document.querySelector('.vdivide').releasePointerCapture(1), true)");
+    await page.mouse("mouseMoved", held + 200, y);
+    await page.mouse("mouseReleased", held + 200, y);
+    assert.deepEqual([await page.eval(LEFT), await page.eval("document.querySelector('main').classList.contains('dragging')")], [held, false]);
+    // Home and End go to the ends of the range; a double click gives the first sizes back
+    await page.eval(KEY("Home"));
+    assert.equal((await page.eval(RATIO))[3], "20");
+    await page.eval(KEY("End"));
+    assert.equal((await page.eval(RATIO))[3], "80");
+    await page.eval("(document.querySelector('.vdivide').dispatchEvent(new MouseEvent('dblclick', {bubbles: true})), true)");
+    assert.deepEqual(await page.eval(RATIO), ["55%", "55%", "55%", "55"]);
+    // Source above Graph: the buttons float over the route of stages at the top of Graph, whole, not cut off by it
+    await page.eval(PICK("Source / Graph"));
+    const [rx, ry] = await page.eval(MIDDLE);
+    await page.mouse("mouseMoved", rx - 200, ry);
+    await page.until(`${TOOLS} === 'visible'`);
+    assert.deepEqual(await page.eval(`(() => { const r = document.querySelector('.dtools').getBoundingClientRect(), below = document.elementFromPoint(r.left + r.width / 2, r.bottom - 2);
+      return [!!document.querySelector('.route')?.contains(document.elementFromPoint(r.left + r.width / 2, r.bottom + 12)), document.querySelector('.dtools').contains(below)]; })()`), [true, true]);
+    await page.close();
+  });
+
+  test("a rendered page: the Layout picker shows Graph and Source together, the divider swaps and turns them, and this browser keeps the layout", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "layout")));
+    await page.size(1400, 900);
+    const SEEN = `(() => { const main = document.querySelector('main'), box = (sel) => document.querySelector(sel).getBoundingClientRect(), b = document.getElementById('vt-layout');
+      return { split: main.dataset.split || '', order: main.dataset.order || '', both: box('#v-graph').width > 0 && box('#v-source').width > 0, graphFirst: box('#v-graph').left < box('#v-source').left,
+        on: b.classList.contains('on'), tabs: document.querySelectorAll('.vtab[aria-selected=true]').length, label: b.getAttribute('aria-label'), lines: document.querySelectorAll('#v-source .sl').length > 5 }; })()`;
+    assert.deepEqual([(await page.eval(SEEN)).split, (await page.eval(SEEN)).label], ["", "Layout: Graph"]);
+    await page.eval(PICK("Graph | Source"));
+    assert.deepEqual(await page.eval(SEEN), {split: "cols", order: "gs", both: true, graphFirst: true, on: true, tabs: 0, label: "Layout: Graph and Source side by side", lines: true});
+    // a swap keeps the size of each view in pixels: each view gives up half the divider
+    const SWAP = "(document.querySelector('.dtools button[aria-label=\"Swap Graph and Source\"]').click(), true)";
+    const SIZES = (side) => `['#v-graph', '#v-source'].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().${side} * 10) / 10)`;
+    const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 0.5);  // a phone's device pixels round a share by a fraction of a CSS pixel
+    const wide = await page.eval(SIZES("width"));
+    await page.eval(SWAP);
+    assert.deepEqual([(await page.eval(SEEN)).order, (await page.eval(SEEN)).graphFirst, same(await page.eval(SIZES("width")), wide)], ["sg", false, true]);
+    // the layout is this browser's convenience: the page opens with it again
+    await page.reload();
+    assert.deepEqual([(await page.eval(SEEN)).split, (await page.eval(SEEN)).order, (await page.eval(SEEN)).both], ["cols", "sg", true]);
+    await page.eval(CLICK("vt-graph"));
+    assert.deepEqual([(await page.eval(SEEN)).split, (await page.eval(SEEN)).tabs, (await page.eval(SEEN)).on], ["", 1, false]);
+    // Source alone is kept too; a stored value the page does not know gives the defaults, and the page still draws
+    await page.eval(PICK("Source"));
+    await page.reload();
+    assert.deepEqual([(await page.eval(SEEN)).split, await page.eval("document.querySelector('.vtab[aria-selected=true]').id")], ["", "vt-source"]);
+    for (const bad of ['{"ratio":{"toString":null}}', '{"view":"x","split":"y","ratio":"z"}', '"text"', "not json"]) {
+      await page.eval(`(localStorage.setItem('skillflow-layout', ${JSON.stringify(bad)}), true)`);
+      await page.reload();
+      assert.deepEqual(await page.eval("[!!document.querySelector('.app .node'), document.querySelector('.vtab[aria-selected=true]').id, document.querySelector('main').style.getPropertyValue('--ratio')]"), [true, "vt-graph", "55%"], bad);
+    }
+    // a phone: the picker is a sheet at the bottom with the four layouts it can show, each a finger's size
+    await page.phone(390, 844);
+    await page.eval("(document.getElementById('vt-layout').click(), true)");
+    const sheet = await page.eval(`(() => { const r = document.getElementById('sf-layout').getBoundingClientRect(), shown = [...document.querySelectorAll('#sf-layout .th')].filter((b) => b.getBoundingClientRect().width);
+      return [Math.round(r.left), Math.round(innerWidth - r.right), Math.round(innerHeight - r.bottom), shown.map((b) => b.textContent).join(), shown.every((b) => b.getBoundingClientRect().height >= 44)]; })()`);
+    assert.deepEqual(sheet, [8, 8, 8, "Graph,Graph / Source,Source,Source / Graph", true]);
+    await page.eval("([...document.querySelectorAll('#sf-layout .th')].find((b) => b.textContent === 'Graph / Source').click(), true)");
+    const tall = await page.eval(SIZES("height"));
+    await page.eval(SWAP);
+    const swapped = await page.eval(SIZES("height"));
+    assert.ok(same(swapped, tall), `a phone: a swap keeps the heights: ${tall} -> ${swapped}`);
+  });
+
   test("the details panel hides and comes back; a card brings it back; a rendered page has no editor controls", async (t) => {
     if (unavailable) return t.skip(unavailable);
     const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "panel")));
     await page.size(1400, 900);
     const SEEN = `(() => { const box = (sel) => (document.querySelector(sel) ? document.querySelector(sel).getBoundingClientRect() : {width: 0});
       return { panel: box('.panel').width > 0, show: box('.panel-show').width > 0, stage: Math.round(box('.stage').width), focus: document.activeElement.getAttribute('aria-label') }; })()`;
-    assert.deepEqual(await page.eval("[document.querySelectorAll('#vt-cols, #vt-rows, .srcmode, #sfe').length, document.querySelector('.views').parentNode.className]"), [0, "bar"]);
+    assert.deepEqual(await page.eval("[document.querySelectorAll('.srcmode, #sfe').length, document.querySelector('.views').parentNode.className]"), [0, "vswitch"]);
     const open = await page.eval(SEEN);
     assert.deepEqual([open.panel, open.show, open.stage], [true, false, 1400 - 360]);
     const corner = await page.eval("(() => { const r = document.querySelector('.panel-hide').getBoundingClientRect(); return [Math.round(r.right), Math.round(r.top)]; })()");
@@ -651,17 +779,17 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     assert.deepEqual(await page.eval(HEADER), want, "a phone: the row fits");
   });
 
-  test("the view tabs: in the middle of the header, after the name in Tab order; on a phone the utilities take row 2", async (t) => {
+  test("the view tabs and the Layout button: in the middle of the header, after the name in Tab order; on a phone the utilities take row 2", async (t) => {
     if (unavailable) return t.skip(unavailable);
     const page = await (await fresh()).open(url(render(tmp, EXAMPLE, "tabs-middle")));
-    const TABS = `(() => { const bar = document.querySelector('header.bar'), v = bar.querySelector('.views').getBoundingClientRect();
+    const TABS = `(() => { const bar = document.querySelector('header.bar'), v = bar.querySelector('.vswitch').getBoundingClientRect();
       const b = bar.querySelector('.brand').getBoundingClientRect(), u = bar.querySelector('.themebtn').closest('.tray').getBoundingClientRect();
       const stops = [...bar.querySelectorAll('button')].filter((e) => e.tabIndex >= 0 && e.getClientRects().length);
       return { order: [...bar.children].map((e) => e.className), middle: Math.abs((v.left + v.right) / 2 - innerWidth / 2) <= 1,
         tabStop: stops.findIndex((e) => e.classList.contains('vtab')) + 1, tabsRow1: v.top < b.bottom && v.bottom > b.top, utilsRow1: u.top < b.bottom,
         clear: Math.round(Math.min(bar.querySelector('.savebox').getBoundingClientRect().left - v.right, v.left - bar.querySelector('.binfo').getBoundingClientRect().right)),
         trailing: Math.round(innerWidth - u.right), scroll: document.documentElement.scrollWidth <= innerWidth }; })()`;
-    const order = ["brand", "views", "barutils"];
+    const order = ["brand", "vswitch", "barutils"];
     // the longest save status is an error text: it shortens with an ellipsis, and does not cover the view tabs
     // the error state is bold, so it is the widest; the page shows the full text above 1000px and the short text at 1000px or less
     const STATUS = (text, state) => `(() => { const st = document.querySelector('.sstat'); st.dataset.state = ${JSON.stringify(state)};
@@ -680,9 +808,9 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     await page.phone(390, 844);
     const {clear, ...phone} = await page.eval(TABS);  // the utilities are on row 2: no distance to measure
     assert.deepEqual(phone, {order, middle: false, tabStop: 2, tabsRow1: true, utilsRow1: false, trailing: 12, scroll: true}, "a phone");
-    // two rows on one grid: the name and the save status share the left edge, the view tabs and the tray of the theme button the right one; a touch screen has no shortcuts button
+    // two rows on one grid: the name and the save status share the left edge, the view tabs with the Layout button and the tray of the theme button the right one; a touch screen has no shortcuts button
     assert.deepEqual(await page.eval(`(() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
-      return { left: r('.brand').left === r('.savebox').left, right: r('.views').right === document.querySelector('.themebtn').closest('.tray').getBoundingClientRect().right, keys: getComputedStyle(document.querySelector('.kbtn')).display }; })()`),
+      return { left: r('.brand').left === r('.savebox').left, right: r('.vswitch').right === document.querySelector('.themebtn').closest('.tray').getBoundingClientRect().right, keys: getComputedStyle(document.querySelector('.kbtn')).display }; })()`),
       {left: true, right: true, keys: "none"}, "a phone: the header's edges");
   });
 
@@ -750,7 +878,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       facts: document.querySelector('.rs-facts').textContent,
       nums: q('.snum').map((b) => b.textContent), picked: q('.elabel.pick').map((l) => l.textContent),
       dimmed: q('.node.dim .nm').map((n) => n.textContent), lit: document.querySelectorAll('svg.edges.scn .e.on').length > 0 }; })()`;
-  const pick = (text) => `[...document.querySelectorAll('.sc-fork .opt')].find((b) => b.textContent === ${JSON.stringify(text)}).click()`;
+  const pick = (text) => `[...document.querySelectorAll('.sc-fork .opt')].find((b) => b.querySelector('.on').textContent === ${JSON.stringify(text)}).click()`;
 
   test("Scenario: one run with a pick at each branch point; the graph numbers the run and dims the rest", async (t) => {
     if (unavailable) return t.skip(unavailable);
@@ -775,7 +903,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     await foot.eval(`document.querySelector('.scnbtn').click(); ${pick("catch")}`);
     assert.deepEqual((await foot.eval(RUN)).nums, ["1", "2", "3", "4–5"]);
     // the choice keeps keyboard focus; arrows move it like any radio group
-    assert.equal(await page.eval(`document.activeElement.getAttribute('aria-checked') + ':' + document.activeElement.textContent`), "true:catch");
+    assert.equal(await page.eval(`document.activeElement.getAttribute('aria-checked') + ':' + document.activeElement.querySelector('.on').textContent`), "true:catch");
     await page.eval(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))`);
     assert.equal(await page.eval(`document.querySelector('.rs-facts').textContent`), "4 steps · 2 ask you · 1 repeat · reaches DONE");
     // closing the scenario restores the graph
@@ -783,6 +911,42 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       return { nums: document.querySelectorAll('.snum').length, dim: document.querySelectorAll('.node.dim').length, scn: document.querySelector('svg.edges').classList.contains('scn'), pressed: document.querySelector('.scnbtn').getAttribute('aria-pressed') }; })()`);
     assert.deepEqual(closed, {nums: 0, dim: 0, scn: false, pressed: "false"});
     assert.deepEqual(await page.eval(`(() => { const r = window.skillflow.check(); return Object.keys(r).filter((k) => k !== 'size' && r[k].length); })()`), []);
+  });
+
+  test("Scenario choices: each says where it leads and what it changes; only a click acts; a pick offers Undo", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    const page = await (await fresh()).open(url(render(tmp, SCENARIO, "scenario-notes")) + "#scenario");
+    const NOTES = `[...document.querySelectorAll('.sc-fork')].map((f) => [f.querySelector('.sc-fcap') && f.querySelector('.sc-fcap').textContent,
+      ...[...f.querySelectorAll('.opt')].map((b) => b.querySelector('.on').textContent + ' ' + b.querySelector('.oc').textContent)])`;
+    assert.deepEqual(await page.eval(NOTES), [
+      ["Pick an outcome to change the run", "help → explain · −2, ends early", "build → draft · this run"],
+      ["Pick an answer to change the run", "approved → ship · this run", "revise redo, then ask again"],
+      [null, "ok → done · this run", "catch +1, stops on a failure"]]);
+    // only a click acts: a mouse on another outcome changes nothing on the page; Reset answers is in place and off until a pick
+    const hover = await page.eval(`(() => { const b = [...document.querySelectorAll('.sc-fork .opt')].find((x) => x.dataset.o === 'help'), html = document.querySelector('.app').innerHTML;
+      b.dispatchEvent(new PointerEvent('pointerover', {bubbles: true, pointerType: 'mouse'}));
+      return { same: document.querySelector('.app').innerHTML === html, reset: document.querySelector('.screset').disabled }; })()`);
+    assert.deepEqual(hover, {same: true, reset: true});
+    await page.eval(pick("help"));
+    assert.equal(await page.eval(`document.querySelector('.screset').disabled`), false, "a pick turns Reset answers on");
+    const undo = await page.eval(`(() => { const t = document.querySelector('.toast'), r = [t.classList.contains('on'), t.querySelector('span').textContent];
+      [...t.querySelectorAll('.tbtn')].find((b) => b.textContent === 'Undo').click();
+      return r.concat(document.querySelector('.rs-facts').textContent, location.hash, document.querySelector('.toast').classList.contains('on')); })()`);
+    assert.deepEqual(undo, [true, "Run changed: 4 → 2 steps, ends early", "4 steps · 1 asks you · reaches DONE", "#scenario", false], "Undo brings the run and its address back");
+  });
+
+  test("Scenario on a card off the run: the panel names the picks that lead there and routes the run through the card", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    const page = await (await fresh()).open(url(render(tmp, SCENARIO, "scenario-route")) + "#scenario");
+    const open = (name) => `[...document.querySelectorAll('.node')].find((n) => n.querySelector('.nm') && n.querySelector('.nm').textContent === ${JSON.stringify(name)}).click()`;
+    await page.eval(open("explain"));
+    assert.equal(await page.eval(`document.querySelector('.scroute').textContent`), "This run skips this card. It takes: mode → help.Run through this card");
+    await page.eval(`document.querySelector('.scroute .btn').click()`);
+    assert.deepEqual(await page.eval(`[document.querySelector('.panel h2').textContent, document.querySelector('.scroute').textContent, location.hash, document.querySelector('.toast span').textContent]`),
+      ["explain", "Step 2 of this run.", "#scenario=mode=help", "Run changed: 4 → 2 steps, ends early"]);
+    // a card that the reader's picks end the run before: the route goes back to the defaults for the other answers
+    await page.eval(open("ship"));
+    assert.equal(await page.eval(`document.querySelector('.scroute').textContent`), "This run skips this card. It takes: mode → build.Run through this card");
   });
 
   test("Scenario address: #scenario=name=outcome opens that run; picks and closing keep the address in step", async (t) => {
@@ -1951,6 +2115,33 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     assert.deepEqual(seen, {sides: ["right", "right"], problems: []});
   });
 
+  test("a lane that ends goes to the free side of its decision, so its end arrow crosses no lane that goes on", async (t) => {
+    if (unavailable) return t.skip(unavailable);
+    // the owner's shape: the implied `no` goes on; the written `yes` ends; `install` is the last lane of `render`
+    const flow = 'skillflow 1.0\nphase p {\n  decide render "Which path?" by=llm {\n    when plain "go on"\n    when other {\n'
+      + '      decide install "Install first?" by=human {\n        when yes {\n          step pause by=llm "The agent records the wait."\n          end "wait"\n        }\n      }\n    }\n  }\n  step after by=llm\n}\n';
+    // a review case: `a`, `b` and `d` end and already stand at the free sides, so the order stays and no arrow runs through an end card
+    const kept = 'skillflow 1.0\ndecide n1 "Q?" by=llm {\n  when yes {\n    phase n2 {\n      decide n16 "Q?" by=llm {\n'
+      + '        when a {\n          end "stop 17"\n        }\n        when b {\n          end "stop 18"\n        }\n        when c "nothing"\n        when d {\n          end "stop 19"\n        }\n      }\n    }\n  }\n}\n';
+    const SEEN = (outcomes) => `(() => {
+      const lab = (o) => parseFloat(document.querySelector('.elabel[data-k][data-o="' + o + '"]').style.left);
+      const segs = [];
+      [...new Set([...document.querySelectorAll('path.e')].map((p) => p.getAttribute('data-pts')))].forEach((s, k) => {
+        const p = s.split(/[ML]/).filter(Boolean).map((t) => t.trim().split(' ').map(Number));
+        for (let i = 0; i + 1 < p.length; i++) segs.push({k, a: p[i], b: p[i + 1]});
+      });
+      const flat = (s, i) => Math.abs(s.a[i] - s.b[i]) < 0.5, lo = (s, i) => Math.min(s.a[i], s.b[i]), hi = (s, i) => Math.max(s.a[i], s.b[i]);
+      const crossings = segs.filter((h) => flat(h, 1)).flatMap((h) => segs.filter((v) => v.k !== h.k && flat(v, 0) && v.a[0] > lo(h, 0) + 1 && v.a[0] < hi(h, 0) - 1 && h.a[1] > lo(v, 1) + 1 && h.a[1] < hi(v, 1) - 1));
+      const r = window.skillflow.check();
+      const order = ${JSON.stringify(outcomes)}.sort((x, y) => lab(x) - lab(y));
+      return {order: order.join(), crossings: crossings.length, problems: Object.keys(r).filter((k) => k !== 'size' && r[k].length)};
+    })()`;
+    for (const [name, text, order] of [["end-lane-side", flow, ["no", "yes"]], ["end-lane-kept", kept, ["a", "b", "c", "d"]]]) {
+      const page = await (await fresh()).open(url(render(tmp, text, name)));
+      assert.deepEqual(await page.eval(SEEN([...order].reverse())), {order: order.join(), crossings: 0, problems: []}, name);
+    }
+  });
+
   test("outcomes that hold no card share one straight line with their labels in a column; each label stays a Scenario choice", async (t) => {
     if (unavailable) return t.skip(unavailable);
     const flow = 'skillflow 1.0\nstep before by=llm\ndecide d "Which?" by=llm {\n  when a "go on"\n  when b "go on"\n  when c "go on"\n'
@@ -2215,8 +2406,10 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
   const EDITOR = `(() => { const root = document.documentElement, id = (name) => document.getElementById(name);
     return { status: root.dataset.status, renders: Number(root.dataset.renders), marks: [Number(root.dataset.added), Number(root.dataset.changed)], dirty: root.hasAttribute('data-dirty'), outside: root.hasAttribute('data-outside'),
       title: document.title, main: id('st-main').textContent, file: id('st-file').textContent, banner: id('sf-stale') ? id('sf-stale').textContent : null, count: id('sf-live') ? id('sf-live').textContent : null,
-      problems: [...id('problems').querySelectorAll('button')].map((b) => b.textContent), nodes: document.querySelectorAll('.canvas .node').length, focus: document.activeElement.id, view: [document.querySelector('.vtab[aria-selected=true]').id.slice(3), document.querySelector('main').dataset.split || '', root.querySelector('.vsource').classList.contains('editing') ? 'edit' : 'read'].join(' '), error: root.dataset.pageError ?? null }; })()`;
+      problems: [...id('problems').querySelectorAll('button')].map((b) => b.textContent), nodes: document.querySelectorAll('.canvas .node').length, focus: document.activeElement.id, view: [(document.querySelector('.vtab[aria-selected=true]')?.id.slice(3) ?? (document.getElementById('vt-layout').classList.contains('on') ? 'layout' : '')), document.querySelector('main').dataset.split || '', root.querySelector('.vsource').classList.contains('editing') ? 'edit' : 'read'].join(' '), error: root.dataset.pageError ?? null }; })()`;
   const CLICK = (id) => `(document.getElementById(${JSON.stringify(id)}).click(), true)`;
+  // a layout of the Layout picker, by its visible name: Graph, Graph | Source, Graph / Source, Source, Source | Graph, Source / Graph
+  const PICK = (name) => `(document.getElementById('vt-layout').click(), [...document.querySelectorAll('#sf-layout .th')].find((b) => b.textContent === ${JSON.stringify(name)}).click(), true)`;
 
   test("editor: the page runs SkillFlow's own check and render, and its text is set as in the first prototype", async (t) => {
     if (unavailable) return t.skip(unavailable);
@@ -2412,10 +2605,10 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       const count = lines.length, marked = [...new Set(lines)];
       assert.ok(marked.length >= 2, `problems on two lines or more: ${lines}`);
       const AT = `(() => { const area = document.getElementById('src'); return { line: area.value.slice(0, area.selectionStart).split('\\n').length, split: document.querySelector('main').dataset.split || '',
-        tab: document.querySelector('.vtab[aria-selected=true]').id.slice(3), count: document.getElementById('pcount').textContent, focus: document.activeElement.id }; })()`;
+        tab: (document.querySelector('.vtab[aria-selected=true]')?.id.slice(3) ?? (document.getElementById('vt-layout').classList.contains('on') ? 'layout' : '')), count: document.getElementById('pcount').textContent, focus: document.activeElement.id }; })()`;
       await page.eval("(document.getElementById('src').setSelectionRange(0, 0), true)");
       await page.eval("(document.querySelector('#sf-stale button').click(), true)");
-      assert.deepEqual(await page.eval(AT), {line: lines[0], split: "cols", tab: "cols", count: `1 of ${count}`, focus: "src"}, "from the graph alone, the text comes beside it at the first problem");
+      assert.deepEqual(await page.eval(AT), {line: lines[0], split: "cols", tab: "layout", count: `1 of ${count}`, focus: "src"}, "from the graph alone, the text comes beside it at the first problem");
       await page.eval(CLICK("sf-live"));
       assert.deepEqual([(await page.eval(AT)).line, (await page.eval(AT)).count], [lines[1], `2 of ${count}`], "each press is one step");
       // the ruler: a mark for each problem line with its message as the tip, the mark of the cursor's line ringed, a shade for the part in view
@@ -2542,20 +2735,20 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     if (unavailable) return t.skip(unavailable);
     const first = await editor("ed-layout");
     const LAYOUT = `(() => { const main = document.querySelector('main'), seen = (sel) => !document.querySelector(sel).hidden && document.querySelector(sel).getBoundingClientRect().width > 0;
-      return { tab: document.querySelector('.vtab[aria-selected=true]').id.slice(3), split: main.dataset.split || '', ratio: main.style.getPropertyValue('--ratio'), graph: seen('#v-graph'), source: seen('#v-source'),
-        divider: !document.querySelector('.vdivide').hidden, on: document.querySelectorAll('.vtab[aria-selected=true]').length,
+      return { tab: (document.querySelector('.vtab[aria-selected=true]')?.id.slice(3) ?? (document.getElementById('vt-layout').classList.contains('on') ? 'layout' : '')), split: main.dataset.split || '', ratio: Math.round(parseFloat(main.style.getPropertyValue('--ratio'))) + '%', graph: seen('#v-graph'), source: seen('#v-source'),
+        divider: !document.querySelector('.vdivide').hidden, on: document.querySelectorAll('.vtab[aria-selected=true], #vt-layout.on').length,
         mode: document.querySelector('.srcmode [aria-pressed=true]')?.dataset.mode ?? null, editor: document.getElementById('sfe').checkVisibility({visibilityProperty: true}), panel: !document.querySelector('.vgraph').classList.contains('nopanel') }; })()`;
     const PRESS = (selector) => `(document.querySelector(${JSON.stringify(selector)}).click(), true)`;
     try {
       const chrome = await fresh(), page = await chrome.open(first.url, DRAWN);
       // one page, one header: the viewer's own, with no second row of editor buttons
-      assert.deepEqual(await page.eval("[document.querySelectorAll('header').length, document.querySelectorAll('iframe').length, [...document.querySelectorAll('.views .vtab')].map((b) => b.getAttribute('aria-label')).join()]"), [1, 0, "Graph,Side by side,Stacked,Source,Help"]);
+      assert.deepEqual(await page.eval("[document.querySelectorAll('header').length, document.querySelectorAll('iframe').length, [...document.querySelectorAll('.views .vtab')].map((b) => b.getAttribute('aria-label')).join(), document.querySelectorAll('#sf-layout .th').length]"), [1, 0, "Graph,Source,Help", 6]);
       // the first window was narrow, so that page started with the text alone; the start is not kept, and a wide window starts with the graph beside the text
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).mode], ["", "source", "edit"]);
       await page.size(1400, 900);
       await page.eval("(window.__old = true, location.reload(), true)");
       await page.until(`!window.__old && ${DRAWN}`);
-      assert.deepEqual(await page.eval(LAYOUT), {tab: "cols", split: "cols", ratio: "55%", graph: true, source: true, divider: true, on: 1, mode: "edit", editor: true, panel: false});
+      assert.deepEqual(await page.eval(LAYOUT), {tab: "layout", split: "cols", ratio: "55%", graph: true, source: true, divider: true, on: 1, mode: "edit", editor: true, panel: false});
       assert.equal(await page.eval("document.activeElement.id"), "src", "the page starts in the text");
       // a tab gives its view the whole page
       await page.eval(CLICK("vt-graph"));
@@ -2569,7 +2762,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.until(`Number(document.documentElement.dataset.renders) > ${renders}`);
       assert.equal(await page.eval("document.querySelector('.canvas').textContent.includes('by size') && document.querySelector('.canvas .node').getBoundingClientRect().width > 0"), true);
       assert.equal((await page.eval(LAYOUT)).tab, "graph", "a new text keeps the view");
-      await page.eval(CLICK("vt-cols"));
+      await page.eval(PICK("Graph | Source"));
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).editor], ["cols", true, true]);
       // the divider: arrow keys, then a drag with the mouse
       await page.eval("(document.querySelector('.vdivide').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true})), true)");
@@ -2580,15 +2773,35 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.mouse("mousePressed", x, y);
       await page.mouse("mouseMoved", 700, y);
       await page.mouse("mouseReleased", 700, y);
-      assert.equal((await page.eval(LAYOUT)).ratio, "50%", "the divider is under the pointer: 700 of 1400 px");
+      assert.equal((await page.eval(LAYOUT)).ratio, "50%", "the divider is under the pointer: 700 of 1400 px, to a fraction of a pixel");
+      // a new text draws the viewer again and keeps the divider where the drag left it, to the fraction
+      const RAW = "document.querySelector('main').style.getPropertyValue('--ratio')", dragged = await page.eval(RAW), drawn = (await page.eval(EDITOR)).renders;
+      await page.eval(TYPE(EXAMPLE.replace("Group the changes by type.", "Group the changes by kind.")));
+      await page.until(`Number(document.documentElement.dataset.renders) > ${drawn}`);
+      assert.equal(await page.eval(RAW), dragged);
+      // the text of the steps below again
+      const kind = (await page.eval(EDITOR)).renders;
+      await page.eval(TYPE(EXAMPLE.replace("Group the changes by type.", "Group the changes by size.")));
+      await page.until(`Number(document.documentElement.dataset.renders) > ${kind}`);
       await page.mouse("mouseMoved", 30, y);
       assert.equal((await page.eval(LAYOUT)).ratio, "50%", "a pointer that is not held does not move it");
-      // a second press on a split tab keeps its split; the other split tab puts Graph above Source
-      await page.eval(CLICK("vt-cols"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).ratio], ["cols", "cols", "50%"]);
-      await page.eval(CLICK("vt-rows"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).on], ["rows", "rows", 1]);
+      // the same layout again keeps the split; Graph / Source puts Graph above Source
+      await page.eval(PICK("Graph | Source"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).ratio], ["cols", "layout", "50%"]);
+      await page.eval(PICK("Graph / Source"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, (await page.eval(LAYOUT)).on], ["rows", "layout", 1]);
       assert.equal(await page.eval("document.querySelector('#v-source').getBoundingClientRect().top >= document.querySelector('#v-graph').getBoundingClientRect().bottom"), true);
+      // the divider's buttons: a swap puts Source first and keeps the two sizes; a turn puts the two views side by side
+      const ORDER = "[document.querySelector('main').dataset.order, document.querySelector('.vdivide').getAttribute('aria-valuetext'), document.getElementById('vt-layout').getAttribute('aria-label')]";
+      await page.eval("(document.querySelector('.vdivide').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true})), true)");
+      await page.eval("(document.querySelector('.dtools button[aria-label=\"Swap Graph and Source\"]').click(), true)");
+      assert.deepEqual(await page.eval(ORDER), ["sg", "Source 46%", "Layout: Source above Graph"]);
+      assert.equal(await page.eval("document.querySelector('#v-graph').getBoundingClientRect().top >= document.querySelector('#v-source').getBoundingClientRect().bottom"), true);
+      await page.eval("(document.querySelector('.dtools .dturn').click(), true)");
+      assert.deepEqual([(await page.eval(LAYOUT)).split, ...(await page.eval(ORDER))], ["cols", "sg", "Source 46%", "Layout: Source and Graph side by side"]);
+      await page.eval(PICK("Graph / Source"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).ratio, ...(await page.eval(ORDER))], ["rows", "54%", "gs", "Graph 54%", "Layout: Graph above Source"]);
+      await page.eval("(document.querySelector('.vdivide').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true})), true)");
       // Read: the flow as the graph shows it, with its line numbers for comments; Edit: the editor again, with its text
       await page.eval(PRESS(".srcmode [data-mode=read]"));
       const read = await page.eval(LAYOUT);
@@ -2605,40 +2818,37 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.eval(CLICK("p-toggle"));
       assert.deepEqual(await page.eval("[document.getElementById('p-toggle').getAttribute('aria-expanded'), document.getElementById('problems').checkVisibility()]"), ["false", false]);
       await page.eval(CLICK("p-toggle"));
-      // Help is one more state of the same switch; from it, Source is the text alone, and a split tab gives its split
+      // Help is one more tab; from it, Source is the text alone, and a layout gives its split
       await page.eval(CLICK("vt-help"));
       assert.deepEqual([(await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).source, (await page.eval(LAYOUT)).divider], [false, false, false]);
       await page.eval(CLICK("vt-source"));
       assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["", false, "source"]);
-      await page.eval(CLICK("vt-rows"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["rows", true, "rows"]);
-      // the arrow keys move along the five tabs, and each split tab gives its own split
+      await page.eval(PICK("Graph / Source"));
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).graph, (await page.eval(LAYOUT)).tab], ["rows", true, "layout"]);
+      // the arrow keys move along the three tabs and go round; each tab gives its view alone
       const ARROW = (id, key) => `(document.getElementById('${id}').dispatchEvent(new KeyboardEvent('keydown', {key: '${key}', bubbles: true})), true)`;
       await page.eval(ARROW("vt-graph", "ArrowRight"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["cols", "vt-cols"]);
-      await page.eval(ARROW("vt-cols", "ArrowRight"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["rows", "vt-rows"]);
-      // a narrow window has no side-by-side tab: the arrow keys pass it, and the stacked tab is on for either split
+      assert.deepEqual([(await page.eval(LAYOUT)).split, (await page.eval(LAYOUT)).tab, await page.eval("document.activeElement.id")], ["", "source", "vt-source"]);
+      await page.eval(ARROW("vt-source", "ArrowLeft"));
+      await page.eval(ARROW("vt-graph", "ArrowLeft"));
+      assert.deepEqual([(await page.eval(LAYOUT)).tab, await page.eval("document.activeElement.id")], ["help", "vt-help"]);
+      // a narrow window stacks a side-by-side split: the picker has no side-by-side layouts, the button shows the stack, and the divider has no turn
       await page.size(700, 900);
-      await page.eval(CLICK("vt-cols"));
-      assert.deepEqual([(await page.eval(LAYOUT)).tab, await page.eval("document.getElementById('vt-cols').getBoundingClientRect().width")], ["rows", 0]);
-      await page.eval(ARROW("vt-graph", "ArrowRight"));
-      assert.deepEqual([(await page.eval(LAYOUT)).split, await page.eval("document.activeElement.id")], ["rows", "vt-rows"]);
-      await page.eval(ARROW("vt-rows", "ArrowLeft"));
-      assert.equal(await page.eval("document.activeElement.id"), "vt-graph");
+      await page.eval(PICK("Graph | Source"));
+      assert.deepEqual(await page.eval("[document.querySelector('main').dataset.split, (document.getElementById('vt-layout').click(), [...document.querySelectorAll('#sf-layout .th')].filter((b) => b.getBoundingClientRect().width).length + (document.getElementById('sf-layout').hidePopover(), 0)), !!document.querySelector('#vt-layout .mini.rows'), document.querySelector('.dtools .dturn').getBoundingClientRect().width]"), ["cols", 4, true, 0]);
+      assert.equal(await page.eval("document.querySelector('#v-source').getBoundingClientRect().top >= document.querySelector('#v-graph').getBoundingClientRect().bottom"), true);
       await page.size(1400, 900);
-      await page.eval(CLICK("vt-rows"));
-      await page.eval(CLICK("vt-graph"));
+      await page.eval(PICK("Source / Graph"));
       // another editor server has another port; the browser still knows this viewer's choices
       const second = await editor("ed-layout-2");
       try {
         assert.notEqual(new URL(second.url).port, new URL(first.url).port);
         const next = await chrome.open(second.url, DRAWN);
         const kept = await next.eval(LAYOUT);
-        assert.deepEqual([kept.tab, kept.split, kept.ratio, kept.panel], ["graph", "", "50%", true]);
-        assert.deepEqual(await next.eval("document.getElementById('vt-rows').dataset.tip"), "Graph above Source", "a split tab has no text: its tip and its name say the split");
-        await next.eval(CLICK("vt-rows"));
-        assert.deepEqual([(await next.eval(LAYOUT)).split, (await next.eval(LAYOUT)).mode], ["rows", "edit"], "the last split is kept while one view is alone");
+        assert.deepEqual([kept.tab, kept.split, kept.ratio, kept.panel, await next.eval("document.querySelector('main').dataset.order")], ["layout", "rows", "50%", true, "sg"]);
+        assert.deepEqual(await next.eval("document.getElementById('vt-layout').getAttribute('aria-label')"), "Layout: Source above Graph", "the button has no text: its name says the layout");
+        await next.eval(CLICK("vt-graph"));
+        assert.deepEqual([(await next.eval(LAYOUT)).split, (await next.eval(LAYOUT)).mode], ["", "edit"]);
         assert.equal((await next.eval(EDITOR)).error, null);
       } finally { await second.close(); }
     } finally { await first.close(); }
@@ -2650,7 +2860,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
     try {
       const page = await (await fresh()).open(address, DRAWN);
       await page.size(1400, 900);
-      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-cols"));
+      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(PICK("Graph | Source"));
       await page.eval("(document.querySelector('.srcmode [data-mode=read]').click(), true)");
       const CARD = (name) => `[...document.querySelectorAll('.canvas .node')].find((n) => n.querySelector('.nm') && n.querySelector('.nm').textContent === '${name}')`;
       // graph to text: the clicked card's line is the marked line, and it is in view below the Read view's head
@@ -2684,7 +2894,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.eval(TYPE(EXAMPLE + Array.from({length: 120}, (_, index) => `step extra-${index} by=llm\n`).join("")));
       await page.until("document.documentElement.dataset.status === 'ok' && document.querySelectorAll('.canvas .node.k-step').length > 100");
       // print: the Source view beside the graph would lie over it
-      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(CLICK("vt-cols"));
+      if ((await page.eval("document.querySelector('main').dataset.split || ''")) === "") await page.eval(PICK("Graph | Source"));
       const SHOWN = "['#v-graph', '#v-source', '#sf-park', '.vdivide'].map((sel) => getComputedStyle(document.querySelector(sel)).display !== 'none')";
       assert.deepEqual(await page.eval(SHOWN), [true, true, true, true]);
       await page.media("print");
@@ -2711,7 +2921,7 @@ describe("viewer in Chrome", {skip: CHROME ? false : "no Chrome: set CHROME_BIN 
       await page.until(`${LOOK}[1]`);
       assert.deepEqual(await page.eval(LOOK), ["edit", true, "switch", "none", "none", "1px"]);
       // beside the graph the head of Read mode and the editor's bar stay inside their view: no part is cut, and the view has no sideways scroll
-      await page.eval(CLICK("vt-cols"));
+      await page.eval(PICK("Graph | Source"));
       const CUT = (bar) => `(() => { const edge = document.querySelector('${bar}').getBoundingClientRect().right + 1, view = document.getElementById('v-source');
         return [[...document.querySelectorAll('${bar} > *, ${bar} button')].filter((part) => part.getBoundingClientRect().width && part.getBoundingClientRect().right > edge).length, view.scrollWidth > view.clientWidth]; })()`;
       assert.deepEqual(await page.eval(CUT("#sfe-bar")), [0, false]);

@@ -41,10 +41,27 @@ code,kbd{font-family:var(--mono);font-size:.88em;background:var(--surface-2);bor
 @media (min-width:761px){.bar{display:grid;grid-template-columns:1fr auto 1fr}.barutils{justify-content:flex-end}}
 /* the Save button keeps its name and tooltip but drops its label first: the save status keeps its full text down to 1001px */
 @media (max-width:1400px){.savebtn .lbl{display:none}}
-@media (max-width:1000px){.vtab{padding:4px 8px}.vtab .lbl{display:none}}
-/* the split tabs draw the split and have no text: a narrower tab; a narrow window stacks the views, so it has no side-by-side tab */
-.vtab.vsplit{padding-inline:8px}
-@media (max-width:760px){#vt-cols{display:none}}
+/* the Layout button takes room in the header: at 1000px or less the tabs and Review show their icons (Review keeps its count) */
+@media (max-width:1000px){.vtab{padding:4px 8px}.vtab .lbl,.rvx .lbl{display:none}}
+/* the Layout button beside the tabs: a picture of the layout now, on while Graph and Source are both in view */
+.vswitch{display:flex;align-items:center;gap:6px;min-width:0}
+.vlayout{display:inline-flex;align-items:center;gap:4px;align-self:stretch;padding:0 8px;border:1px solid var(--line);border-radius:11px;background:color-mix(in srgb,var(--surface-2) 70%,transparent);color:var(--ink-2);cursor:pointer}
+.vlayout.on{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--accent)}
+.vlayout .mini{width:22px;height:15px;gap:1px;border-radius:3px}
+.vlayout:focus-visible,.th:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mini{display:grid;gap:2px;width:64px;height:42px;border-radius:5px;overflow:hidden;flex:none}
+.mini.cols{grid-template-columns:1fr 1fr}.mini.rows{grid-template-rows:1fr 1fr}
+.mini i{display:block;border-radius:2px}
+.mini .gg{background:color-mix(in srgb,var(--llm) 30%,var(--canvas))}
+.mini .ss{background:repeating-linear-gradient(180deg,color-mix(in srgb,var(--ink) 22%,var(--surface)) 0 2px,var(--surface-2) 2px 6px)}
+.tmenu.tlayout{width:304px;padding:12px}
+.tmenu.tlayout:popover-open{gap:8px;justify-items:stretch}
+.tlayout h2{margin:0;font-size:var(--fs-12);font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.th{display:grid;gap:5px;justify-items:center;border:1px solid var(--line);border-radius:10px;background:none;padding:8px 6px 6px;cursor:pointer;font-size:var(--fs-11);color:var(--ink-2)}
+.th[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:600}
+/* a phone: the picker is a sheet at the bottom, without the side-by-side layouts that it cannot show */
+@media (max-width:760px){.tmenu.tlayout{inset:auto 8px 8px 8px!important;width:auto;border-radius:16px;padding:14px}.th.cols{display:none}.thumbs{grid-template-columns:repeat(2,1fr)}.th{min-height:72px}}
 .brand h1{font-size:var(--fs-16);font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* one row: the name, the skill version, About and the error badge */
 .brand .bhead{display:flex;align-items:baseline;gap:8px;min-width:0}
@@ -330,6 +347,9 @@ svg.edges .e.lit{stroke:var(--accent);stroke-width:2.25}svg.edges .ah.lit{fill:v
 .lnk:hover{text-decoration:underline}
 .srcref{margin-top:16px;padding-top:10px;border-top:1px solid var(--line);font-size:var(--fs-12);color:var(--muted)}
 .act{margin-top:12px}
+/* Scenario on a card: where the card stands in the run, or a button that routes the run through it */
+.scroute{margin:8px 0 4px;font-size:var(--fs-13);color:var(--ink-2)}.scroute.on{color:var(--accent);font-weight:600}
+.scroute.off{display:grid;gap:8px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:10px;background:var(--accent-soft)}.scroute.off p{margin:0}.scroute .btn{justify-self:start}@media (pointer:coarse){.scroute .btn{min-height:44px}}
 .btn{border:1px solid var(--line-2);background:var(--surface);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:var(--fs-12);display:inline-flex;gap:4px;align-items:center}
 @media (hover:hover){.btn:hover{border-color:var(--accent)}}
 .desc{color:var(--muted);font-size:var(--fs-13);margin:0}
@@ -500,6 +520,8 @@ button.sn{border:0;background:none;padding:0;font:inherit;color:var(--muted);tex
 .toast .g{color:var(--output)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .toast.bad{background:var(--fail);color:#fff}
+/* a phone: the toast takes the width of the screen, so its text and buttons stay on one or two lines */
+@media (max-width:760px){.toast{left:12px;right:12px;max-width:none;transform:translateY(8px)}.toast.on{transform:none}.toast>span{flex:1;min-width:0}}
 .toast.on .tbtn{pointer-events:auto}
 .toast .tbtn{margin-left:4px;border:0;border-radius:6px;padding:2px 10px;font:600 var(--fs-12)/1.6 var(--sans);color:inherit;background:color-mix(in srgb,currentColor 18%,transparent);cursor:pointer}.toast.bad .g,.toast .tbtn .g{color:inherit}.toast .tbtn .g{vertical-align:-3px}
 
@@ -587,7 +609,7 @@ pre.cmd{font:var(--fs-13)/calc(20/13) var(--mono);-webkit-font-smoothing:auto;ba
 @media (max-width:760px){
 /* two rows on one grid: the name and the view tabs, then the save status and the page buttons; the left and the right edges line up */
 .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:8px 12px}
-.views{justify-self:end}
+.vswitch{justify-self:end}
 .barutils{grid-column:1/-1;gap:8px}.savebox{margin-inline-end:auto}.sstat{max-width:none}.badge-err .lbl{display:none}
 .rvx .lbl,.savebtn .lbl{display:none}
 .vgraph{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(120px,1fr) minmax(0,auto)}
@@ -635,7 +657,7 @@ pre.cmd{font:var(--fs-13)/calc(20/13) var(--mono);-webkit-font-smoothing:auto;ba
 .scnentry .go{flex:none;color:var(--accent);transition:transform .12s}
 .scsum{position:sticky;top:-12px;z-index:4;display:grid;gap:9px;margin:-12px -12px 6px;padding:12px 12px 11px;background:var(--surface);border-bottom:1px solid var(--line)}
 /* the summary: a route strip of the run's steps (colour: who acts; a gap between Route stops), then the facts and a stepper */
-.screset{flex:none;height:26px}
+.screset{flex:none;height:26px}.screset:disabled{opacity:.45;cursor:default}
 .rs-top{display:flex;align-items:center;gap:8px}
 .rs-strip{flex:1;min-width:0;display:flex;align-items:center;gap:2px}
 .rs-seg{--x:var(--edge);flex:1 1 0;min-width:1px;height:20px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center}
@@ -710,6 +732,27 @@ svg.edges.scn .ah.on{opacity:1;fill:var(--accent)}
 .snum.ask{background:var(--human);color:var(--surface)}.snum.fail{background:var(--fail);color:var(--surface)}
 .canvas:not([data-lod=full]) .snum{transform:translate(-40%,-45%) scale(var(--k))}
 @media (prefers-reduced-motion:reduce){.sc-row.new{animation:none}.seg .opt,svg.edges.scn .e{transition:none}}
+/* a branch point: a caption says a pick changes the run; each choice is a card with its outcome and, under it, where it leads and what it changes */
+.sc-fork{display:grid;gap:4px}
+.sc-fcap{display:flex;align-items:center;gap:6px;font:650 var(--fs-10_5)/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.sc-fcap .g{width:12px;height:12px}
+.sc-fork .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(8rem,100%),1fr))}
+.sc-fork .seg .opt{display:grid;justify-items:start;align-content:center;gap:1px;height:auto;min-height:26px;padding:5px 10px;text-align:start}
+.sc-fork .opt[aria-checked=false]{box-shadow:inset 0 0 0 1px var(--line)}
+/* a radio dot: the mark people know for "pick one" */
+.sc-fork .on{display:inline-flex;align-items:center;gap:6px}
+.sc-fork .on::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line-2)}
+.sc-fork .opt[aria-checked=true] .on::before{background:radial-gradient(var(--accent) 40%,transparent 45%);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.sc-fork .oc{font:400 var(--fs-11)/1.3 var(--sans);color:var(--muted);overflow-wrap:anywhere}
+.sc-fork .oc.more{color:var(--human)}.sc-fork .oc.less{color:var(--output)}.sc-fork .oc.ends{color:var(--fail)}
+.sc-fork .opt[aria-checked=true] .oc{color:var(--accent)}
+.sc-fork.quiet .seg .opt{padding:3px 8px}
+@media (hover:hover){.sc-fork .opt[aria-checked=false]:hover{background:var(--surface);box-shadow:inset 0 0 0 1px var(--human)}}
+@media (pointer:coarse){.sc-fork .seg .opt{height:auto;min-height:44px}}
+/* a new pick flashes the edges that joined the run */
+svg.edges.scn .e.on.flash{animation:scflash .9s ease-out}
+@keyframes scflash{from{stroke-width:6}to{stroke-width:2.25}}
+@media (prefers-reduced-motion:reduce){svg.edges.scn .e.on.flash{animation:none}}
 /* Review: the status switch over the tag chips; a resolved comment stays readable but steps back */
 .rvbars{display:grid;gap:8px}
 .rvstatus .opt .n{font-variant-numeric:tabular-nums;color:var(--muted)}
@@ -796,7 +839,7 @@ svg.edges.scn .ah.on{opacity:1;fill:var(--accent)}
 .theme-flip *,.theme-flip *::before,.theme-flip *::after{transition:none!important}
 /* forced colours drop backgrounds and shadows, which carry the selected state everywhere else */
 @media (forced-colors:active){
-.item[aria-pressed=true],.chip[aria-pressed=true],.rstop[aria-pressed=true],.tb.scnbtn[aria-pressed=true],.seg .opt[aria-checked=true],.seg .opt[aria-pressed=true],.vtab[aria-selected=true],.intents .ichip[aria-pressed=true],.rvfilter .ichip[aria-pressed=true],.sl.pick,.sl.hit{outline:2px solid Highlight;outline-offset:-2px}
+.item[aria-pressed=true],.chip[aria-pressed=true],.rstop[aria-pressed=true],.tb.scnbtn[aria-pressed=true],.seg .opt[aria-checked=true],.seg .opt[aria-pressed=true],.vtab[aria-selected=true],.vlayout.on,.th[aria-pressed=true],.intents .ichip[aria-pressed=true],.rvfilter .ichip[aria-pressed=true],.sl.pick,.sl.hit{outline:2px solid Highlight;outline-offset:-2px}
 .node.hit{outline:2.5px solid Highlight;outline-offset:2px}
 .sl.cr::after{content:'';position:absolute;inset:0 auto 0 0;border-left:3px solid CanvasText}
 }
@@ -874,18 +917,40 @@ main.main,.view,.stage,.viewport,.srchead{position:static;overflow:visible}
 .stage{background:none}
 }
 /* ---------- two views in view, the hideable panel, and the Source modes (the edit page) ---------- */
-.main[data-split]{display:grid}
+/* --dw: the divider's width, a finger's width on a touch screen; the ratio is where the divider's middle stands, so each view gives up half the divider and a swap keeps both sizes; order 'sg' puts Source first */
+/* --ratio is not inherited: a drag changes it on every frame, and an inherited value would restyle every element of the page each time (15 ms on a large flow); shell.js sets it on main and on .dtools */
+@property --ratio{syntax:'<percentage>';inherits:false;initial-value:55%}
+.main[data-split]{display:grid;--dw:8px}
 .main[data-split]>.view{position:relative;inset:auto;min-width:0;min-height:0}
-.main[data-split=cols]{grid-template-columns:var(--ratio,55%) 8px minmax(0,1fr)}
-.main[data-split=rows]{grid-template-rows:var(--ratio,55%) 8px minmax(0,1fr)}
-.vdivide{position:relative;background:var(--line);cursor:col-resize;touch-action:none}
+.main[data-split=cols]{grid-template-columns:calc(var(--ratio,55%) - var(--dw) / 2) var(--dw) minmax(0,1fr)}
+.main[data-split=rows]{grid-template-rows:calc(var(--ratio,55%) - var(--dw) / 2) var(--dw) minmax(0,1fr)}
+.main[data-order=sg]>.vsource{order:1}.main[data-order=sg]>.vdivide{order:2}.main[data-order=sg]>.vgraph{order:3}
+/* the divider's buttons stay in view, a little off the middle, where the grip is */
+/* the divider's buttons float over the views only while the pointer is on the divider or on them, or one of them has focus: at rest they covered the top of the next view.
+   z-index 5: above the route of stages (3) and the sticky scenario summary (4) of the next view, which cut off their lower half. The Layout picker swaps and turns too. A short wait before they show lets a pointer cross the divider without a flash; a longer one before they hide lets it reach them */
+.dtools{position:absolute;z-index:5;display:flex;gap:4px;padding:3px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);box-shadow:var(--shadow-2);
+  opacity:0;visibility:hidden;transition:opacity .12s ease .25s,visibility 0s linear .37s}
+.vdivide:hover+.dtools,.dtools:hover,.dtools:focus-within{opacity:1;visibility:visible;transition:opacity .12s ease .1s,visibility 0s linear .1s}
+.vdivide:focus-visible+.dtools{opacity:1;visibility:visible;transition:none}
+@media (hover:none){.vdivide:focus+.dtools{opacity:1;visibility:visible;transition:none}}
+.main.dragging>.dtools{opacity:0;visibility:hidden;transition:none}
+.dtools[hidden]{display:none}
+.dtools .icon-btn{width:26px;height:26px}
+.main[data-split=cols]>.dtools{flex-direction:column;left:var(--ratio,55%);top:50%;transform:translate(-50%,calc(-50% + 64px))}
+.main[data-split=rows]>.dtools{top:var(--ratio,55%);left:50%;transform:translate(calc(-50% + 72px),-50%)}
+@media (pointer:coarse){.main[data-split]{--dw:24px}.dtools .icon-btn{width:40px;height:40px}}
+.vdivide{position:relative;background:var(--line);cursor:col-resize;touch-action:none;transition:background-color .12s ease .1s}
+.vdivide:hover{background:var(--line-2)}
 .vdivide[hidden]{display:none}
 .vdivide::after{content:"";position:absolute;inset:0;margin:auto;width:2px;height:36px;border-radius:2px;background:var(--muted);opacity:.6}
 .main[data-split=rows]>.vdivide{cursor:row-resize}.main[data-split=rows]>.vdivide::after{width:36px;height:2px}
 .vdivide:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .main.dragging{user-select:none}
+/* the divider that a drag holds is in the accent color, so the reader sees what moves */
+.main.dragging>.vdivide{background:var(--accent);transition:none}.main.dragging>.vdivide::after{background:var(--surface);opacity:1}
 /* a phone has no room for two columns: side by side becomes one above the other */
-@media (max-width:760px){.main[data-split=cols]{grid-template-columns:none;grid-template-rows:var(--ratio,55%) 8px minmax(0,1fr)}.main[data-split=cols]>.vdivide{cursor:row-resize}.main[data-split=cols]>.vdivide::after{width:36px;height:2px}}
+@media (max-width:760px){.main[data-split=cols]{grid-template-columns:none;grid-template-rows:calc(var(--ratio,55%) - var(--dw) / 2) var(--dw) minmax(0,1fr)}.main[data-split=cols]>.vdivide{cursor:row-resize}.main[data-split=cols]>.vdivide::after{width:36px;height:2px}
+.main[data-split=cols]>.dtools{flex-direction:row;top:var(--ratio,55%);left:50%;transform:translate(calc(-50% + 72px),-50%)}.dturn{display:none}}
 /* the button that brings the panel back sits in the graph's top corner, at the edge where the panel's own button hides it; the toolbar leaves it room */
 .panel-hide{display:none}.panel-show{position:absolute;z-index:1;top:8px;right:8px;width:34px;height:34px;border:1px solid color-mix(in srgb,var(--line) 75%,transparent);border-radius:11px;background:var(--surface);box-shadow:var(--shadow-1)}
 @media (max-width:760px){.panel-show{display:none}}
@@ -909,7 +974,7 @@ main.main,.view,.stage,.viewport,.srchead{position:static;overflow:visible}
 /* with reduced motion the ring stays still, until the next draw removes the class */
 @media (prefers-reduced-motion:reduce){.node.sfx-new{animation:none;box-shadow:0 0 0 4px #22c55e}.node.sfx-chg{animation:none;box-shadow:0 0 0 4px #f59e0b}}
 /* two views in view print as the graph alone: the Source view would lie over it */
-@media print{.vdivide,.panel-show,.tip,.main[data-split]>.vsource{display:none!important}.main[data-split]{display:block}}
+@media print{.vdivide,.dtools,.panel-show,.tip,.main[data-split]>.vsource{display:none!important}.main[data-split]{display:block}}
 /* ---------- tooltip ---------- */
 .tip{position:fixed;inset:auto;margin:0;max-width:min(300px,calc(100vw - 16px));padding:5px 9px;border:0;border-radius:7px;background:var(--ink);color:var(--surface);font:500 var(--fs-12)/1.4 var(--sans);box-shadow:var(--shadow-2);white-space:pre-line;overflow-wrap:break-word;overflow:hidden;opacity:1;transition:opacity .12s}
 @starting-style{.tip:popover-open{opacity:0}}

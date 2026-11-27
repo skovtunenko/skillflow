@@ -33,28 +33,50 @@
   var brand = add(el('div', 'brand'), bhead);
   var views = el('div', 'views'); views.setAttribute('role', 'tablist'); views.setAttribute('aria-label', 'View');
   var VIEWS = [['graph', 'Graph', 'The flow as a graph'], ['source', 'Source', host ? 'The flow file: read and comment, or edit' : 'The flow file, with its line comments'], ['help', 'Help', 'How to write a flow file']];
-  // the edit page has two more tabs, between the two views that they show together: Graph beside Source, and Graph above Source.
-  // Exactly one tab is on, so the page has five states. The two split tabs draw the split and have no text: their names say it
-  var SPLITS = ['cols', 'rows'], TABS = host ? [VIEWS[0], ['cols', 'Side by side', 'Graph and Source side by side'], ['rows', 'Stacked', 'Graph above Source'], VIEWS[1], VIEWS[2]] : VIEWS;
-  // a narrow window has no room for two views side by side: it hides that tab and stacks a side-by-side split (viewer.css)
+  // Graph, Source, and Help are tabs. The Layout button beside them picks one view alone, or Graph and Source together in either
+  // order, side by side ('cols') or one above the other ('rows'). Exactly one of the tabs and the Layout button is on.
+  var LAYOUTS = [['graph', 'gs', 'Graph'], ['cols', 'gs', 'Graph | Source', 'Graph and Source side by side'], ['rows', 'gs', 'Graph / Source', 'Graph above Source'],
+    ['source', 'gs', 'Source'], ['cols', 'sg', 'Source | Graph', 'Source and Graph side by side'], ['rows', 'sg', 'Source / Graph', 'Source above Graph']];
+  // a narrow window has no room for two views side by side: it stacks a side-by-side split (viewer.css), and the picker leaves those layouts out
   var narrow = window.matchMedia('(max-width:760px)');
-  if (host) listen(narrow, 'change', markTabs);
-  var viewTabs = TABS.map(function (v, i) {
-    var split = SPLITS.indexOf(v[0]) >= 0;
-    var b = tipped(button('vtab' + (split ? ' vsplit' : ''), [glyph(v[0]), split ? null : add(el('span', 'lbl'), document.createTextNode(v[1]))], function () { pickView(v[0]); }), v[2]);
+  listen(narrow, 'change', markTabs);
+  var viewTabs = VIEWS.map(function (v, i) {
+    var b = tipped(button('vtab', [glyph(v[0]), add(el('span', 'lbl'), document.createTextNode(v[1]))], function () { pickView(v[0]); }), v[2]);
     b.setAttribute('role', 'tab'); b.setAttribute('aria-label', v[1]); b.id = 'vt-' + v[0]; b.dataset.view = v[0];
-    b.setAttribute('aria-controls', split ? 'v-graph v-source' : 'v-' + v[0]);
+    b.setAttribute('aria-controls', 'v-' + v[0]);
     b.addEventListener('keydown', function (e) {
-      // Home and End start past an end, so the step lands on the first or the last shown tab
-      var d = e.key === 'ArrowRight' || e.key === 'Home' ? 1 : e.key === 'ArrowLeft' || e.key === 'End' ? -1 : 0, j = e.key === 'Home' ? -1 : e.key === 'End' ? TABS.length : i;
-      if (!d) return;
+      var n = VIEWS.length, j = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i + n - 1) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+      if (j < 0) return;
       e.preventDefault();
-      do j = (j + d + TABS.length) % TABS.length; while (!viewTabs[j].offsetWidth); // past a hidden tab
-      pickView(TABS[j][0]); viewTabs[j].focus();
+      pickView(VIEWS[j][0]); viewTabs[j].focus();
     });
     views.appendChild(b); return b;
   });
   var slideTabs = slider(views, '.vtab[aria-selected=true]');
+  // a small picture of a layout: the graph as a tinted block, the source as lines of text
+  function layoutPic(lay, order) {
+    var m = el('span', 'mini ' + lay); m.setAttribute('aria-hidden', 'true');
+    (lay === 'graph' ? ['gg'] : lay === 'source' ? ['ss'] : order === 'sg' ? ['ss', 'gg'] : ['gg', 'ss']).forEach(function (c) { m.appendChild(el('i', c)); });
+    return m;
+  }
+  var layoutMenu = el('div', 'tmenu tlayout'); layoutMenu.id = 'sf-layout'; layoutMenu.popover = 'auto'; layoutMenu.tabIndex = -1;
+  layoutMenu.setAttribute('role', 'dialog'); layoutMenu.setAttribute('aria-labelledby', 'sf-layout-h');
+  var layoutH = el('h2', null, 'Layout'); layoutH.id = 'sf-layout-h';
+  var thumbs = LAYOUTS.map(function (x) {
+    var b = button('th ' + x[0], [layoutPic(x[0], x[1]), el('span', null, x[2])], function () { layoutMenu.hidePopover(); setLayout(x[0], x[1]); layoutBtn.focus(); }, x[3]);
+    b.setAttribute('aria-pressed', 'false');
+    return b;
+  });
+  add(layoutMenu, layoutH, add.apply(null, [el('div', 'thumbs')].concat(thumbs))); onBody(layoutMenu);
+  var layoutBtn = button('vlayout'); layoutBtn.id = 'vt-layout'; layoutBtn.setAttribute('popovertarget', layoutMenu.id); layoutBtn.setAttribute('aria-haspopup', 'dialog');
+  // under the button, inside the window; a phone shows it as a sheet at the bottom (viewer.css)
+  layoutMenu.addEventListener('beforetoggle', function (e) {
+    if (e.newState !== 'open') return;
+    var r = layoutBtn.getBoundingClientRect(), w = document.documentElement.clientWidth;
+    layoutMenu.style.top = (r.bottom + 6) + 'px'; layoutMenu.style.left = Math.max(8, Math.min(r.left, w - layoutMenu.offsetWidth - 8, w - 320)) + 'px';
+  });
+  layoutMenu.addEventListener('toggle', function (e) { if (e.newState === 'open') (thumbs.filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })[0] || thumbs[0]).focus(); });
+  var vswitch = add(el('div', 'vswitch'), views, layoutBtn);
   // with no comments Review stays in the Tab order and says how to add one, which a disabled button cannot
   var exportBtn = button('btn rvx', null, function () {
     if (!comments.length) return toast(exportBtn.dataset.tip);
@@ -89,7 +111,7 @@
   listen(darkMq, 'change', function () { if (!themeIx) applyTheme(); });
   applyTheme();
   // the view tabs sit between the name and the utilities: the middle of the header, and the second stop in Tab order
-  app.appendChild(add(bar, brand, views, add(el('div', 'barutils'), saveBox, add(el('div', 'tray'), exportBtn, themeBtn))));
+  app.appendChild(add(bar, brand, vswitch, add(el('div', 'barutils'), saveBox, add(el('div', 'tray'), exportBtn, themeBtn))));
   var main = el('main', 'main'); app.appendChild(main);
   function section(name, cls) { var s = el('section', 'view ' + cls); s.id = 'v-' + name; s.setAttribute('role', 'tabpanel'); s.setAttribute('aria-labelledby', 'vt-' + name); main.appendChild(s); return s; }
   var vGraph = section('graph', 'vgraph'), vSource = section('source', 'vsource'), vHelp = section('help', 'vhelp');
@@ -97,28 +119,60 @@
   var divider = el('div', 'vdivide'); divider.hidden = true; divider.tabIndex = 0; divider.setAttribute('role', 'separator');
   divider.setAttribute('aria-label', 'Resize Graph and Source'); divider.setAttribute('aria-valuemin', '20'); divider.setAttribute('aria-valuemax', '80');
   main.insertBefore(divider, vSource);
+  // on the divider while the pointer is on it or it has focus (viewer.css): swap the two views, and turn the split between side by side and one above the other.
+  // They are not inside the separator, whose children a screen reader does not see.
+  var swapBtn = button('icon-btn', glyph('swap'), function () { setLayout(state.split, state.order === 'gs' ? 'sg' : 'gs'); }, 'Swap Graph and Source');
+  var turnBtn = button('icon-btn dturn', glyph('rotate'), function () { setLayout(state.split === 'cols' ? 'rows' : 'cols', state.order); });
+  var dtools = add(el('div', 'dtools'), swapBtn, turnBtn); dtools.hidden = true;
+  main.insertBefore(dtools, vSource);
+  function first() { return state.order === 'sg' ? 'Source' : 'Graph'; }
   function setRatio(r) {
-    // Graph stays within 20-80 % and Source gets the rest after the divider, so neither closes; aria-valuemin and aria-valuemax above say the same
-    state.ratio = Math.max(20, Math.min(80, Math.round(r)));
-    main.style.setProperty('--ratio', state.ratio + '%'); divider.setAttribute('aria-valuenow', String(state.ratio)); divider.setAttribute('aria-valuetext', 'Graph ' + state.ratio + '%');
+    // the first view stays within 20-80 % and the second gets the rest after the divider, so neither closes; aria-valuemin and aria-valuemax above say the same.
+    // The ratio is not rounded: a drag moves the divider with the pointer, pixel by pixel; only what a screen reader hears is a whole percent.
+    // viewer.css registers --ratio as not inherited, so a new value restyles main and the divider's buttons, not every element of the page
+    state.ratio = Math.max(20, Math.min(80, r));
+    var at = state.ratio + '%', said = Math.round(state.ratio);
+    main.style.setProperty('--ratio', at); dtools.style.setProperty('--ratio', at);
+    divider.setAttribute('aria-valuenow', String(said)); divider.setAttribute('aria-valuetext', first() + ' ' + said + '%');
   }
   divider.addEventListener('pointerdown', function (down) {
-    function move(e) { var r = main.getBoundingClientRect(), rows = getComputedStyle(main).gridTemplateColumns.split(' ').length < 3; setRatio(rows ? (e.clientY - r.top) / r.height * 100 : (e.clientX - r.left) / r.width * 100); }
+    if (down.button) return;
+    // the box and the axis are read on each move: a window that changes size or a turn of the split under a drag is in the next move.
+    // The browser gives one move per frame, after the last frame's layout, so the read costs no extra layout.
+    // grab: where on the divider the pointer took it, so the divider does not jump to the pointer; a new axis drops it
+    var rows = null, grab = 0;
+    function at(e) {
+      var r = main.getBoundingClientRect(), now = getComputedStyle(main).gridTemplateColumns.split(' ').length < 3;
+      if (rows !== null && now !== rows) grab = 0;
+      rows = now;
+      return rows ? (e.clientY - r.top) / r.height * 100 : (e.clientX - r.left) / r.width * 100;
+    }
+    grab = at(down) - state.ratio;
+    function move(e) { setRatio(at(e) - grab); }
+    // lostpointercapture comes after pointerup and after pointercancel (a touch that the browser takes for a scroll), so every drag ends here.
+    // Every listener is on the divider: a viewer that draws again under a drag takes the divider away, and nothing of the drag stays behind
+    function end() { divider.removeEventListener('pointermove', move); divider.removeEventListener('lostpointercapture', end); main.classList.remove('dragging'); keepPrefs(); }
     divider.setPointerCapture(down.pointerId); main.classList.add('dragging');
     divider.addEventListener('pointermove', move);
-    divider.addEventListener('pointerup', function () { divider.removeEventListener('pointermove', move); main.classList.remove('dragging'); keepPrefs(); }, { once: true });
+    divider.addEventListener('lostpointercapture', end);
   });
+  // a double click gives the views their first sizes back
+  divider.addEventListener('dblclick', function () { setRatio(55); keepPrefs(); });
   divider.addEventListener('keydown', function (e) {
-    // an arrow key moves the divider 4 % of the room: a fine step, and 15 presses still cross the whole 20-80 range
+    // an arrow key moves the divider 4 % of the room: a fine step, and 15 presses still cross the whole 20-80 range; Home and End go to the ends of the range
     var d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -4 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 4 : 0;
-    if (d) { e.preventDefault(); setRatio(state.ratio + d); keepPrefs(); }
+    var to = e.key === 'Home' ? 20 : e.key === 'End' ? 80 : d && state.ratio + d;
+    if (to) { e.preventDefault(); setRatio(to); keepPrefs(); }
   });
   setRatio(state.ratio);
-  // Graph and Source ask for one view alone, a split tab for the two together, side by side ('cols') or one above the other ('rows')
-  function pickView(name) {
-    if (SPLITS.indexOf(name) < 0) { if (name !== 'help') state.split = ''; showView(name); return keepPrefs(); }
-    state.split = state.dir = name;
-    showView(state.view === 'help' ? 'source' : state.view); keepPrefs();
+  // a tab asks for its view alone; Help keeps the split to come back to
+  function pickView(name) { if (name !== 'help') state.split = ''; showView(name); keepPrefs(); }
+  // a layout of the picker or the divider: one view alone, or the two in an order; a swap keeps the sizes of the two views
+  function setLayout(lay, order) {
+    if (lay !== 'cols' && lay !== 'rows') return pickView(lay);
+    if (order !== state.order) { state.order = order; setRatio(100 - state.ratio); }
+    state.split = state.dir = lay;
+    showView(state.view === 'help' ? (host ? 'source' : 'graph') : state.view); keepPrefs();
   }
   // with two views in view, the keys go to the one the reader works in
   [[vGraph, 'graph'], [vSource, 'source']].forEach(function (p) {
@@ -358,15 +412,23 @@
   function openSheet() { panel.classList.add('open'); sheetBtn.replaceChildren(glyph('down')); sheetBtn.setAttribute('aria-expanded', 'true'); }
   function closeSheet() { panel.classList.remove('open'); sheetBtn.replaceChildren(glyph('up')); sheetBtn.setAttribute('aria-expanded', 'false'); }
 
-  // one tab is on: the split's tab while Graph and Source are both in view, else the tab of the view
+  // one is on: the Layout button while Graph and Source are both in view, else the tab of the view. The tab of the view the reader
+  // works in stays the tab that Tab reaches
   function markTabs() {
-    var both = !!state.split && state.view !== 'help', tab = both ? (narrow.matches ? 'rows' : state.split) : state.view;
+    var both = !!state.split && state.view !== 'help', lay = both ? (narrow.matches ? 'rows' : state.split) : state.view;
     viewTabs.forEach(function (b) {
-      var on = b.dataset.view === tab;
-      b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
+      var on = !both && b.dataset.view === state.view;
+      b.setAttribute('aria-selected', String(on)); b.tabIndex = b.dataset.view === state.view ? 0 : -1;
     });
     slideTabs();
-    divider.setAttribute('aria-orientation', tab === 'cols' ? 'vertical' : 'horizontal'); // side by side the divider is a vertical line
+    var cur = LAYOUTS.filter(function (x) { return x[0] === lay && (!both || x[1] === state.order); })[0] || LAYOUTS[0];
+    layoutBtn.replaceChildren(layoutPic(lay, state.order), glyph('down'));
+    layoutBtn.classList.toggle('on', both);
+    layoutBtn.setAttribute('aria-label', 'Layout: ' + (cur[3] || cur[2]));
+    layoutBtn.dataset.tip = 'Layout: ' + (cur[3] || cur[2]) + '. Pick one view, or Graph and Source together';
+    thumbs.forEach(function (b, i) { b.setAttribute('aria-pressed', String(LAYOUTS[i] === cur)); });
+    divider.setAttribute('aria-orientation', lay === 'cols' ? 'vertical' : 'horizontal'); // side by side the divider is a vertical line
+    turnBtn.setAttribute('aria-label', lay === 'cols' ? 'Put Graph and Source one above the other' : 'Put Graph and Source side by side');
     return both;
   }
   function showView(name) {
@@ -374,8 +436,9 @@
     state.view = name;
     var both = markTabs();
     VIEWS.forEach(function (v) { document.getElementById('v-' + v[0]).hidden = !(v[0] === name || (both && v[0] !== 'help')); });
-    if (both) main.dataset.split = state.split; else delete main.dataset.split;
-    divider.hidden = !both;
+    if (both) { main.dataset.split = state.split; main.dataset.order = state.order; } else { delete main.dataset.split; delete main.dataset.order; }
+    divider.hidden = dtools.hidden = !both;
+    setRatio(state.ratio);
     if (name === 'source' || both) buildSource();
     if (name === 'help') buildHelp();
     // leaving Help drops its address, so a later link to the same section opens Help again

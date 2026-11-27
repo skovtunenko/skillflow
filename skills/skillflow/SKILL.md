@@ -2,7 +2,7 @@
 name: skillflow
 description: Describes a skill's workflow as a KDL flow file, checks and syncs the skill against it, and renders it as an HTML page. Use when the user says "skillflow", "skillflow help", "skillflow reverse", "skillflow author", "skillflow check", "skillflow sync", or "skillflow explain", or after a change to a skill whose folder has a flow file (flow.kdl or a .kdl file named after the skill).
 metadata:
-  version: "2026.11.26.2"
+  version: "2026.11.27.5"
 ---
 
 # SkillFlow

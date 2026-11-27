@@ -86,7 +86,7 @@
   function nodePanel(n) {
     ptitle.textContent = title(n); ptitle.className = n.name ? 'idt' : '';
     var KIND = { step: ['step', 'step'], decide: ['decision', 'decide'], gate: ['approval gate', 'gate'], end: ['end', 'end'], phase: ['phase', 'phase'], catch: ['catch', 'fail'] };
-    var parts = [kindRow(KIND[n.kind][0], KIND[n.kind][1], n.by)];
+    var parts = [kindRow(KIND[n.kind][0], KIND[n.kind][1], n.by), scnRoute(n)];
     if ((n.kind === 'decide' || n.kind === 'gate') && n.question) parts.push(inline(el('p', 'pq'), plain(n.question)));
     parts.push(rich(n.prose || n.text));
     parts.push(skillRefs(n.ref ? [n.ref] : null));
